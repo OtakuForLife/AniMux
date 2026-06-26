@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>AniMux</Name>
-  <Repository>ghcr.io/OtakuForLife/animux:latest</Repository>
+  <Repository>ghcr.io/otakuforlife/animux:latest</Repository>
   <Registry>https://github.com/OtakuForLife/AniMux</Registry>
   <Network>bridge</Network>
   <MyIP/>
