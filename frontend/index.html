@@ -114,6 +114,28 @@
     }
     .btn-xs:hover { color: var(--am); border-color: var(--am); }
 
+    /* Search bar */
+    .search-bar {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      background: var(--srf);
+      border-bottom: 1px solid var(--bdr);
+    }
+    .search-input {
+      width: 100%;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--tx);
+      background: var(--el);
+      border: 1px solid var(--bdr);
+      border-radius: 2px;
+      padding: 5px 8px;
+      outline: none;
+      transition: border-color .12s;
+    }
+    .search-input::placeholder { color: var(--tx3); }
+    .search-input:focus { border-color: var(--bdr2); }
+
     /* ─── File list ──────────────────────────────────────────── */
     .flist { flex: 1; overflow-y: auto; }
     .flist.compressed { flex: 0 0 37%; }
@@ -338,12 +360,20 @@
           </div>
         </div>
 
+        <div class="search-bar">
+          <input class="search-input" type="search" placeholder="search files…"
+            x-model="sourceSearch" @keydown.escape="sourceSearch = ''">
+        </div>
+
         <!-- File list -->
         <div class="flist" :class="{ compressed: selectedSource }">
           <div class="empty" x-show="!loading.source && sourceFiles.length === 0">
             no .mkv files found
           </div>
-          <template x-for="f in sourceFiles" :key="f.path">
+          <div class="empty" x-show="!loading.source && sourceFiles.length > 0 && filterFiles(sourceFiles, sourceSearch).length === 0">
+            no matches for "<span x-text="sourceSearch"></span>"
+          </div>
+          <template x-for="f in filterFiles(sourceFiles, sourceSearch)" :key="f.path">
             <div class="frow" :class="{ active: selectedSource?.path === f.path }" @click="probeFile('source', f)">
               <span class="frow-ico">▸</span>
               <span style="flex:1;min-width:0">
@@ -408,12 +438,20 @@
           </div>
         </div>
 
+        <div class="search-bar">
+          <input class="search-input" type="search" placeholder="search files…"
+            x-model="destSearch" @keydown.escape="destSearch = ''">
+        </div>
+
         <!-- File list -->
         <div class="flist" :class="{ compressed: selectedDest }">
           <div class="empty" x-show="!loading.dest && destFiles.length === 0">
             no .mkv files found
           </div>
-          <template x-for="f in destFiles" :key="f.path">
+          <div class="empty" x-show="!loading.dest && destFiles.length > 0 && filterFiles(destFiles, destSearch).length === 0">
+            no matches for "<span x-text="destSearch"></span>"
+          </div>
+          <template x-for="f in filterFiles(destFiles, destSearch)" :key="f.path">
             <div class="frow" :class="{ active: selectedDest?.path === f.path }" @click="probeFile('destination', f)">
               <span class="frow-ico">▸</span>
               <span style="flex:1;min-width:0">
@@ -428,16 +466,17 @@
         <!-- Tracks section header -->
         <div class="shdr" x-show="selectedDest">
           <span>Tracks</span>
-          <span x-text="selectedDestTrackIds.length + '/' + destTracks.length + ' sel'"></span>
+          <span x-text="selectedDestTrackIds.length + '/' + destTracks.filter(t => t.type !== 'video').length + ' sel'"></span>
         </div>
 
         <!-- Destination track list -->
         <div class="tlist" x-show="selectedDest">
           <div class="empty" x-show="!loading.dstProbe && destTracks.length === 0">no tracks found</div>
           <template x-for="t in destTracks" :key="t.id">
-            <div class="trow click" @click="toggleDestTrack(t.id)">
+            <div class="trow" :class="{ click: t.type !== 'video' }" @click="toggleDestTrack(t.id)">
               <input type="checkbox" class="ck"
-                :checked="isDestSel(t.id)"
+                :checked="t.type === 'video' || isDestSel(t.id)"
+                :disabled="t.type === 'video'"
                 @click.stop="toggleDestTrack(t.id)">
               <span class="badge" :class="bCls(t.type)" x-text="bLbl(t.type)"></span>
               <span class="ticon" x-text="tIco(t.type)"></span>
@@ -490,6 +529,8 @@
         destTracks: [],
         selectedTrackIds: [],
         selectedDestTrackIds: [],
+        sourceSearch: '',
+        destSearch: '',
         options: { chapters: true, attachments: true, tags: false },
         job: null,
         polling: null,
@@ -538,7 +579,7 @@
               this.selectedTrackIds = tracks.filter(t => t.type !== 'video').map(t => t.id);
             } else {
               this.destTracks             = tracks;
-              this.selectedDestTrackIds   = tracks.map(t => t.id);
+              this.selectedDestTrackIds   = tracks.filter(t => t.type !== 'video').map(t => t.id);
             }
           } catch (_) {
           } finally {
@@ -555,6 +596,8 @@
         },
 
         toggleDestTrack(id) {
+          const t = this.destTracks.find(t => t.id === id);
+          if (!t || t.type === 'video') return;
           const i = this.selectedDestTrackIds.indexOf(id);
           if (i === -1) this.selectedDestTrackIds.push(id);
           else this.selectedDestTrackIds.splice(i, 1);
@@ -570,7 +613,7 @@
 
         canRemux() {
           if (!this.selectedSource || !this.selectedDest) return false;
-          if (!this.selectedDestTrackIds.length) return false;
+          if (!this.destTracks.length) return false;
           const hasContent = this.selectedTrackIds.length > 0
             || this.options.chapters || this.options.attachments || this.options.tags;
           if (!hasContent) return false;
@@ -631,6 +674,14 @@
         },
 
         // ── Helpers ────────────────────────────────────────
+        filterFiles(files, q) {
+          const needle = q.trim().toLowerCase();
+          if (!needle) return files;
+          return files.filter(f =>
+            f.path.toLowerCase().includes(needle) ||
+            f.name.toLowerCase().includes(needle)
+          );
+        },
         fname(p) {
           return p ? p.replace(/\\/g, '/').split('/').pop() : '';
         },
@@ -681,11 +732,10 @@
           if (!this.selectedSource && !this.selectedDest) return 'select source and destination files to begin';
           if (!this.selectedSource) return 'select a source file ←';
           if (!this.selectedDest)   return 'select a destination file →';
-          if (!this.selectedDestTrackIds.length)
-            return 'select at least one destination track to keep';
           if (!this.selectedTrackIds.length && !this.options.chapters && !this.options.attachments && !this.options.tags)
             return 'select at least one source track or option to transfer';
-          return `${this.selectedDestTrackIds.length} dest + ${this.selectedTrackIds.length} source track(s)  ·  ${this.fname(this.selectedSource.path)}  →  ${this.fname(this.selectedDest.path)}`;
+          const destSel = this.selectedDestTrackIds.length + this.destTracks.filter(t => t.type === 'video').length;
+          return `${destSel} dest + ${this.selectedTrackIds.length} source track(s)  ·  ${this.fname(this.selectedSource.path)}  →  ${this.fname(this.selectedDest.path)}`;
         },
       };
     }

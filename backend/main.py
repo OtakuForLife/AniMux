@@ -145,18 +145,21 @@ async def start_remux(req: RemuxRequest):
         raise HTTPException(status_code=404, detail="Source file not found")
     if not dst_full.exists():
         raise HTTPException(status_code=404, detail="Destination file not found")
-    if not req.dest_track_ids:
-        raise HTTPException(status_code=400, detail="At least one destination track must be selected")
 
     source_track_map = _probe_track_map(src_full)
     dest_track_map = _probe_track_map(dst_full)
+
+    dest_video_ids = [i for i, typ in dest_track_map.items() if typ == "video"]
+    dest_track_ids = list(set(req.dest_track_ids) | set(dest_video_ids))
+    if not dest_track_ids:
+        raise HTTPException(status_code=400, detail="At least one destination track must be selected")
 
     job_id = await remux.start_job(
         source_path=str(src_full),
         dest_path=str(dst_full),
         source_track_ids=req.track_ids,
         source_track_map=source_track_map,
-        dest_track_ids=req.dest_track_ids,
+        dest_track_ids=dest_track_ids,
         dest_track_map=dest_track_map,
         chapters=req.chapters,
         attachments=req.attachments,
