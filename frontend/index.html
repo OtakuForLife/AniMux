@@ -50,7 +50,7 @@
     /* ─── App grid ──────────────────────────────────────────── */
     .app {
       display: grid;
-      grid-template-rows: 52px 1fr 152px;
+      grid-template-rows: 52px 1fr auto auto;
       height: 100vh;
       overflow: hidden;
     }
@@ -92,6 +92,51 @@
     }
 
     .panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Selected files summary */
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1px 1fr;
+      background: var(--srf);
+      border-top: 1px solid var(--bdr);
+    }
+    .summary-col {
+      padding: 10px 14px;
+      min-width: 0;
+    }
+    .summary-lbl {
+      font-size: 10px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--tx3);
+      margin-bottom: 5px;
+    }
+    .summary-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--am);
+      margin-bottom: 4px;
+    }
+    .summary-fname {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--tx);
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .summary-fdir {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--tx3);
+      margin-top: 3px;
+      word-break: break-all;
+    }
+    .summary-empty {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--tx3);
+    }
+    .summary-warn {
+      grid-column: 1 / -1;
+      padding: 5px 14px 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--tx3);
+      border-top: 1px solid var(--bdr);
+    }
 
     /* Panel header bar */
     .phdr {
@@ -288,6 +333,7 @@
     .abar {
       background: var(--srf); border-top: 1px solid var(--bdr);
       padding: 13px 22px;
+      min-height: 72px;
       display: flex; align-items: flex-start; gap: 16px;
     }
 
@@ -338,8 +384,6 @@
     }
     .log::-webkit-scrollbar { width: 3px; }
     .log::-webkit-scrollbar-thumb { background: #0a150a; }
-
-    .hint { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx3); margin-top: 10px; }
 
     /* Spinner */
     .spin {
@@ -525,6 +569,30 @@
 
     </div><!-- /panels -->
 
+    <!-- ══ SELECTED FILES SUMMARY ═══════════════════════════ -->
+    <div class="summary" x-show="!job">
+      <div class="summary-col">
+        <div class="summary-lbl">Source</div>
+        <div x-show="selectedSource">
+          <div class="summary-meta" x-text="sourceSelSummary()"></div>
+          <div class="summary-fname" x-text="fname(selectedSource?.path)"></div>
+          <div class="summary-fdir" x-show="fdir(selectedSource?.path)" x-text="fdir(selectedSource?.path)"></div>
+        </div>
+        <div class="summary-empty" x-show="!selectedSource">no file selected</div>
+      </div>
+      <div class="vdiv"></div>
+      <div class="summary-col">
+        <div class="summary-lbl">Destination</div>
+        <div x-show="selectedDest">
+          <div class="summary-meta" x-text="destSelSummary()"></div>
+          <div class="summary-fname" x-text="fname(selectedDest?.path)"></div>
+          <div class="summary-fdir" x-show="fdir(selectedDest?.path)" x-text="fdir(selectedDest?.path)"></div>
+        </div>
+        <div class="summary-empty" x-show="!selectedDest">no file selected</div>
+      </div>
+      <div class="summary-warn" x-show="summaryWarn()" x-text="summaryWarn()"></div>
+    </div>
+
     <!-- ══ ACTION BAR ════════════════════════════════════════ -->
     <div class="abar">
       <button class="btn-remux" :disabled="!canRemux()" @click="startRemux()">
@@ -548,9 +616,6 @@
         </div>
         <div class="log" x-ref="logArea" x-text="logTxt()"></div>
       </div>
-
-      <!-- Hint text (shown when no job) -->
-      <span class="hint" x-show="!job" x-text="hint()"></span>
     </div>
 
   </div><!-- /app -->
@@ -806,6 +871,32 @@
           return p.join(' · ') || '(unnamed)';
         },
 
+        sourceSelSummary() {
+          const n = this.selectedTrackIds.length;
+          const extra = [];
+          if (this.options.chapters) extra.push('chapters');
+          if (this.options.attachments) extra.push('attachments');
+          if (this.options.tags) extra.push('tags');
+          let s = `${n} track${n !== 1 ? 's' : ''} to transfer`;
+          if (extra.length) s += ` · ${extra.join(', ')}`;
+          return s;
+        },
+
+        destSelSummary() {
+          const kept = this.selectedDestTrackIds.length
+            + this.destTracks.filter(t => t.type === 'video').length;
+          return `${kept} track${kept !== 1 ? 's' : ''} kept`;
+        },
+
+        summaryWarn() {
+          if (!this.selectedSource || !this.selectedDest) return '';
+          if (!this.selectedTrackIds.length && !this.options.chapters
+              && !this.options.attachments && !this.options.tags) {
+            return 'Select at least one source track or transfer option to continue';
+          }
+          return '';
+        },
+
         statusTxt() {
           if (!this.job) return '';
           return {
@@ -819,15 +910,6 @@
           const t = this.job?.log_tail;
           if (!t) return '';
           return Array.isArray(t) ? t.join('\n') : String(t);
-        },
-        hint() {
-          if (!this.selectedSource && !this.selectedDest) return 'select source and destination files to begin';
-          if (!this.selectedSource) return 'select a source file ←';
-          if (!this.selectedDest)   return 'select a destination file →';
-          if (!this.selectedTrackIds.length && !this.options.chapters && !this.options.attachments && !this.options.tags)
-            return 'select at least one source track or option to transfer';
-          const destSel = this.selectedDestTrackIds.length + this.destTracks.filter(t => t.type === 'video').length;
-          return `${destSel} dest + ${this.selectedTrackIds.length} source track(s)  ·  ${this.fname(this.selectedSource.path)}  →  ${this.fname(this.selectedDest.path)}`;
         },
       };
     }
