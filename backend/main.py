@@ -110,9 +110,21 @@ class RemuxRequest(BaseModel):
     source_path: str
     dest_path: str
     track_ids: list[int]
+    dest_track_ids: list[int]
     chapters: bool = True
     attachments: bool = True
     tags: bool = True
+
+
+def _probe_track_map(path: Path) -> dict[int, str]:
+    result = subprocess.run(
+        ["mkvmerge", "-J", str(path)],
+        capture_output=True, text=True,
+    )
+    if result.returncode not in (0, 1):
+        raise HTTPException(status_code=500, detail=f"Failed to probe file: {path.name}")
+    data = json.loads(result.stdout)
+    return {t["id"]: t["type"] for t in data.get("tracks", [])}
 
 
 @app.post("/api/remux")
@@ -133,23 +145,19 @@ async def start_remux(req: RemuxRequest):
         raise HTTPException(status_code=404, detail="Source file not found")
     if not dst_full.exists():
         raise HTTPException(status_code=404, detail="Destination file not found")
+    if not req.dest_track_ids:
+        raise HTTPException(status_code=400, detail="At least one destination track must be selected")
 
-    # Quick probe to build track_map
-    result = subprocess.run(
-        ["mkvmerge", "-J", str(src_full)],
-        capture_output=True, text=True,
-    )
-    if result.returncode not in (0, 1):
-        raise HTTPException(status_code=500, detail="Failed to probe source file")
-
-    data = json.loads(result.stdout)
-    track_map = {t["id"]: t["type"] for t in data.get("tracks", [])}
+    source_track_map = _probe_track_map(src_full)
+    dest_track_map = _probe_track_map(dst_full)
 
     job_id = await remux.start_job(
         source_path=str(src_full),
         dest_path=str(dst_full),
-        track_ids=req.track_ids,
-        track_map=track_map,
+        source_track_ids=req.track_ids,
+        source_track_map=source_track_map,
+        dest_track_ids=req.dest_track_ids,
+        dest_track_map=dest_track_map,
         chapters=req.chapters,
         attachments=req.attachments,
         tags=req.tags,

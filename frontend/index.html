@@ -427,15 +427,18 @@
 
         <!-- Tracks section header -->
         <div class="shdr" x-show="selectedDest">
-          <span>Existing Tracks</span>
-          <span x-text="destTracks.length + ' track' + (destTracks.length !== 1 ? 's' : '')"></span>
+          <span>Tracks</span>
+          <span x-text="selectedDestTrackIds.length + '/' + destTracks.length + ' sel'"></span>
         </div>
 
-        <!-- Destination track list (read-only) -->
+        <!-- Destination track list -->
         <div class="tlist" x-show="selectedDest">
           <div class="empty" x-show="!loading.dstProbe && destTracks.length === 0">no tracks found</div>
           <template x-for="t in destTracks" :key="t.id">
-            <div class="trow dim">
+            <div class="trow click" @click="toggleDestTrack(t.id)">
+              <input type="checkbox" class="ck"
+                :checked="isDestSel(t.id)"
+                @click.stop="toggleDestTrack(t.id)">
               <span class="badge" :class="bCls(t.type)" x-text="bLbl(t.type)"></span>
               <span class="ticon" x-text="tIco(t.type)"></span>
               <span class="tlbl" x-text="tLbl(t)"></span>
@@ -485,7 +488,8 @@
         selectedDest: null,
         sourceTracks: [],
         destTracks: [],
-        selectedTrackIds: [],   // ponytail: array behaves as set; Alpine needs array for reactivity
+        selectedTrackIds: [],
+        selectedDestTrackIds: [],
         options: { chapters: true, attachments: true, tags: false },
         job: null,
         polling: null,
@@ -518,8 +522,9 @@
             this.sourceTracks     = [];
             this.selectedTrackIds = [];
           } else {
-            this.selectedDest = file;
-            this.destTracks   = [];
+            this.selectedDest     = file;
+            this.destTracks       = [];
+            this.selectedDestTrackIds = [];
           }
           this.loading[pk] = true;
           try {
@@ -532,7 +537,8 @@
               // auto-select all non-video tracks
               this.selectedTrackIds = tracks.filter(t => t.type !== 'video').map(t => t.id);
             } else {
-              this.destTracks = tracks;
+              this.destTracks             = tracks;
+              this.selectedDestTrackIds   = tracks.map(t => t.id);
             }
           } catch (_) {
           } finally {
@@ -548,12 +554,23 @@
           else this.selectedTrackIds.splice(i, 1);
         },
 
+        toggleDestTrack(id) {
+          const i = this.selectedDestTrackIds.indexOf(id);
+          if (i === -1) this.selectedDestTrackIds.push(id);
+          else this.selectedDestTrackIds.splice(i, 1);
+        },
+
         isSel(id) {
           return this.selectedTrackIds.includes(id);
         },
 
+        isDestSel(id) {
+          return this.selectedDestTrackIds.includes(id);
+        },
+
         canRemux() {
           if (!this.selectedSource || !this.selectedDest) return false;
+          if (!this.selectedDestTrackIds.length) return false;
           const hasContent = this.selectedTrackIds.length > 0
             || this.options.chapters || this.options.attachments || this.options.tags;
           if (!hasContent) return false;
@@ -569,12 +586,13 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                source_path:  this.selectedSource.path,
-                dest_path:    this.selectedDest.path,
-                track_ids:    this.selectedTrackIds,
-                chapters:     this.options.chapters,
-                attachments:  this.options.attachments,
-                tags:         this.options.tags,
+                source_path:     this.selectedSource.path,
+                dest_path:       this.selectedDest.path,
+                track_ids:       this.selectedTrackIds,
+                dest_track_ids:  this.selectedDestTrackIds,
+                chapters:        this.options.chapters,
+                attachments:     this.options.attachments,
+                tags:            this.options.tags,
               }),
             });
             if (!r.ok) {
@@ -663,9 +681,11 @@
           if (!this.selectedSource && !this.selectedDest) return 'select source and destination files to begin';
           if (!this.selectedSource) return 'select a source file ←';
           if (!this.selectedDest)   return 'select a destination file →';
+          if (!this.selectedDestTrackIds.length)
+            return 'select at least one destination track to keep';
           if (!this.selectedTrackIds.length && !this.options.chapters && !this.options.attachments && !this.options.tags)
-            return 'select at least one track or option to transfer';
-          return `${this.selectedTrackIds.length} track(s) selected  ·  ${this.fname(this.selectedSource.path)}  →  ${this.fname(this.selectedDest.path)}`;
+            return 'select at least one source track or option to transfer';
+          return `${this.selectedDestTrackIds.length} dest + ${this.selectedTrackIds.length} source track(s)  ·  ${this.fname(this.selectedSource.path)}  →  ${this.fname(this.selectedDest.path)}`;
         },
       };
     }

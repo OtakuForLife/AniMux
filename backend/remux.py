@@ -18,38 +18,69 @@ class Job:
 JOBS: dict[str, Job] = {}
 
 
+def _track_opts(
+    track_ids: list[int],
+    track_map: dict[int, str],
+    *,
+    no_video: bool = False,
+) -> list[str]:
+    opts: list[str] = []
+    if no_video:
+        opts.append("--no-video")
+    else:
+        video_ids = [str(i) for i in track_ids if track_map.get(i) == "video"]
+        if video_ids:
+            opts.extend(["--video-tracks", ",".join(video_ids)])
+        else:
+            opts.append("--no-video")
+
+    audio_ids = [str(i) for i in track_ids if track_map.get(i) == "audio"]
+    if audio_ids:
+        opts.extend(["--audio-tracks", ",".join(audio_ids)])
+    else:
+        opts.append("--no-audio")
+
+    sub_ids = [str(i) for i in track_ids if track_map.get(i) == "subtitles"]
+    if sub_ids:
+        opts.extend(["--subtitle-tracks", ",".join(sub_ids)])
+    else:
+        opts.append("--no-subtitles")
+    return opts
+
+
 def build_mkvmerge_cmd(
     dest_path: str,
     source_path: str,
-    track_ids: list[int],
-    track_map: dict[int, str],  # {id: "audio"|"subtitles"|"video"|...}
+    source_track_ids: list[int],
+    source_track_map: dict[int, str],
+    dest_track_ids: list[int],
+    dest_track_map: dict[int, str],
     chapters: bool,
     attachments: bool,
     tags: bool,
     output_path: str,
 ) -> list[str]:
-    audio_ids = [str(i) for i in track_ids if track_map.get(i) == "audio"]
-    sub_ids = [str(i) for i in track_ids if track_map.get(i) == "subtitles"]
-
-    cmd = [
-        "mkvmerge", "-o", output_path,
-        dest_path,
-        "--video-tracks", "",
-        "--audio-tracks", ",".join(audio_ids) if audio_ids else "",
-        "--subtitle-tracks", ",".join(sub_ids) if sub_ids else "",
-        *(["--no-chapters"] if not chapters else []),
-        *(["--no-attachments"] if not attachments else []),
-        *(["--no-tags"] if not tags else []),
-        source_path,
-    ]
+    cmd = ["mkvmerge", "-o", output_path]
+    cmd.extend(_track_opts(dest_track_ids, dest_track_map))
+    cmd.append(dest_path)
+    cmd.extend(_track_opts(source_track_ids, source_track_map, no_video=True))
+    if not chapters:
+        cmd.append("--no-chapters")
+    if not attachments:
+        cmd.append("--no-attachments")
+    if not tags:
+        cmd.extend(["--no-global-tags", "--no-track-tags"])
+    cmd.append(source_path)
     return cmd
 
 
 async def start_job(
     source_path: str,
     dest_path: str,
-    track_ids: list[int],
-    track_map: dict[int, str],
+    source_track_ids: list[int],
+    source_track_map: dict[int, str],
+    dest_track_ids: list[int],
+    dest_track_map: dict[int, str],
     chapters: bool,
     attachments: bool,
     tags: bool,
@@ -57,7 +88,12 @@ async def start_job(
     job_id = str(uuid.uuid4())
     job = Job(id=job_id)
     JOBS[job_id] = job
-    asyncio.create_task(_run_job(job_id, source_path, dest_path, track_ids, track_map, chapters, attachments, tags))
+    asyncio.create_task(_run_job(
+        job_id, source_path, dest_path,
+        source_track_ids, source_track_map,
+        dest_track_ids, dest_track_map,
+        chapters, attachments, tags,
+    ))
     return job_id
 
 
@@ -65,8 +101,10 @@ async def _run_job(
     job_id: str,
     source_path: str,
     dest_path: str,
-    track_ids: list[int],
-    track_map: dict[int, str],
+    source_track_ids: list[int],
+    source_track_map: dict[int, str],
+    dest_track_ids: list[int],
+    dest_track_map: dict[int, str],
     chapters: bool,
     attachments: bool,
     tags: bool,
@@ -75,7 +113,12 @@ async def _run_job(
     job.status = "running"
 
     tmp_path = dest_path + ".animux.tmp"
-    cmd = build_mkvmerge_cmd(dest_path, source_path, track_ids, track_map, chapters, attachments, tags, tmp_path)
+    cmd = build_mkvmerge_cmd(
+        dest_path, source_path,
+        source_track_ids, source_track_map,
+        dest_track_ids, dest_track_map,
+        chapters, attachments, tags, tmp_path,
+    )
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -94,13 +137,15 @@ async def _run_job(
 
     _, stderr_bytes = await proc.communicate()
 
-    if proc.returncode == 0:
+    if proc.returncode in (0, 1):  # mkvmerge returns 1 for warnings
         os.replace(tmp_path, dest_path)
         job.status = "done"
         job.progress_pct = 100
     else:
         job.status = "error"
         job.error = stderr_bytes.decode(errors="replace")
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 
 if __name__ == "__main__":

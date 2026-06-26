@@ -62,6 +62,7 @@ def test_remux_missing_source_returns_404(client):
         "source_path": "ghost.mkv",
         "dest_path": "out.mkv",
         "track_ids": [],
+        "dest_track_ids": [0],
         "chapters": True,
         "attachments": True,
         "tags": True,
