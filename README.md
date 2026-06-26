@@ -34,13 +34,27 @@ Open **http://localhost:8000** in your browser.
 ## Unraid
 
 1. In the Unraid Docker UI, click **Add Container**.
-2. Paste the raw URL of `unraid-template.xml` from this repo into the **Template URL** field and click **Apply**:
-   ```
-   https://raw.githubusercontent.com/OtakuForLife/AniMux/main/unraid-template.xml
-   ```
-3. Set **Source Directory** to the Unraid share that holds your source MKV files (e.g. `/mnt/user/downloads`).
-4. Set **Destination Directory** to your media library share (e.g. `/mnt/user/media`).
-5. Click **Apply**. The WebUI will be available at `http://[unraid-ip]:8000`.
+2. Set **Repository** to `ghcr.io/otakuforlife/animux:latest`
+3. **Network Type:** Bridge
+4. **Add Port** — container port `8000`, host port whatever you prefer (e.g. `8000`)
+5. **Add Path** (read-only, source MKV files):
+   - Container: `/source`
+   - Host: e.g. `/mnt/user/downloads`
+6. **Add Path** (read/write, destination MKV files):
+   - Container: `/destination`
+   - Host: e.g. `/mnt/user/media`
+7. Click **Apply**.
+
+Open **http://[unraid-ip]:[host-port]** (the host port from step 4). The app always listens on port `8000` inside the container — only the host-side mapping changes.
+
+**Optional:** Install the template for one-click setup next time:
+
+```bash
+wget -O /boot/config/plugins/dockerMan/templates-user/animux.xml \
+  https://raw.githubusercontent.com/OtakuForLife/AniMux/main/unraid-template.xml
+```
+
+After that, **AniMux** appears in the template dropdown when adding a container.
 
 ---
 
