@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>AniMux</Name>
+  <Repository>ghcr.io/youruser/animux:latest</Repository>
+  <Registry>https://github.com/youruser/animux</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project/>
+  <Overview>AniMux — Transfer subtitles, audio tracks, chapters and fonts between MKV files without re-encoding.</Overview>
+  <Category>MediaApp:</Category>
+  <WebUI>http://[IP]:[PORT:8000]</WebUI>
+  <TemplateURL/>
+  <Icon/>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="WebUI Port" Target="8000" Default="8000" Mode="tcp" Description="Web interface port" Type="Port" Display="always" Required="true" Mask="false">8000</Config>
+  <Config Name="Source Directory" Target="/source" Default="/mnt/user/downloads" Mode="ro" Description="Temporary downloads folder (source MKV files)" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/downloads</Config>
+  <Config Name="Destination Directory" Target="/destination" Default="/mnt/user/media" Mode="rw" Description="Media library folder (destination MKV files)" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/media</Config>
+</Container>

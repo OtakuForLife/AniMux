@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AniMux — MKV Track Transfer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    [x-cloak] { display: none !important; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #07090d;
+      --srf:     #0d1117;
+      --el:      #141922;
+      --el2:     #1c2333;
+      --bdr:     #1e2840;
+      --bdr2:    #2a3550;
+      --tx:      #cdd3de;
+      --tx2:     #5e6a82;
+      --tx3:     #2e3a52;
+      --am:      #f0a020;
+      --am-glow: rgba(240, 160, 32, 0.09);
+      --grn:     #3dd68c;
+      --blu:     #79b8ff;
+      --red:     #ff7b72;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--tx);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    /* Subtle scanline atmosphere */
+    body::after {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 3px,
+        rgba(0, 0, 0, .028) 3px, rgba(0, 0, 0, .028) 4px
+      );
+    }
+
+    /* ─── App grid ──────────────────────────────────────────── */
+    .app {
+      display: grid;
+      grid-template-rows: 52px 1fr 152px;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────── */
+    .hdr {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 22px;
+      background: var(--srf);
+      border-bottom: 1px solid var(--bdr);
+      position: relative;
+    }
+    .hdr::after {
+      content: ''; position: absolute; bottom: 0; left: 0;
+      width: 38%; height: 1px;
+      background: linear-gradient(90deg, var(--am), transparent);
+      opacity: .45;
+    }
+    .logo {
+      font-size: 24px; font-weight: 700; letter-spacing: 4px;
+      color: var(--am); text-transform: uppercase;
+    }
+    .hdr-sep { color: var(--bdr2); }
+    .tagline { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx2); }
+    .hdr-pill {
+      margin-left: auto;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: var(--tx3); background: var(--el); border: 1px solid var(--bdr);
+      padding: 2px 9px; border-radius: 2px; letter-spacing: 1px;
+    }
+
+    /* ─── Panels ─────────────────────────────────────────────── */
+    .panels { display: grid; grid-template-columns: 1fr 1px 1fr; overflow: hidden; }
+
+    .vdiv {
+      background: linear-gradient(
+        180deg, transparent 0%, var(--bdr2) 12%, var(--bdr) 50%, var(--bdr2) 88%, transparent 100%
+      );
+    }
+
+    .panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Panel header bar */
+    .phdr {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 14px;
+      background: var(--srf); border-bottom: 1px solid var(--bdr);
+    }
+    .ptitle {
+      font-size: 11px; font-weight: 600; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--tx2);
+    }
+
+    /* Tiny icon button */
+    .btn-xs {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: var(--tx3); background: none;
+      border: 1px solid var(--bdr); padding: 2px 8px; border-radius: 2px;
+      cursor: pointer; transition: color .12s, border-color .12s;
+    }
+    .btn-xs:hover { color: var(--am); border-color: var(--am); }
+
+    /* ─── File list ──────────────────────────────────────────── */
+    .flist { flex: 1; overflow-y: auto; }
+    .flist.compressed { flex: 0 0 37%; }
+    .flist::-webkit-scrollbar { width: 3px; }
+    .flist::-webkit-scrollbar-thumb { background: var(--bdr2); }
+
+    .frow {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 14px;
+      border-bottom: 1px solid rgba(30, 40, 64, .4);
+      cursor: pointer; transition: background .1s;
+      position: relative;
+    }
+    .frow::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 2px; background: var(--am);
+      transform: scaleX(0); transition: transform .1s; transform-origin: left;
+    }
+    .frow:hover { background: var(--el); }
+    .frow:hover::before { transform: scaleX(1); }
+    .frow.active { background: var(--am-glow); }
+    .frow.active::before { transform: scaleX(1); }
+
+    .frow-ico { color: var(--tx3); font-size: 11px; flex-shrink: 0; }
+    .fname {
+      font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+      color: var(--tx);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .frow.active .fname { color: var(--am); }
+    .fsubdir {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--tx3);
+      display: block; margin-top: 1px;
+    }
+    .fsize { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--tx2); flex-shrink: 0; }
+
+    /* ─── Section divider ────────────────────────────────────── */
+    .shdr {
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 14px;
+      background: var(--srf);
+      border-top: 1px solid var(--bdr); border-bottom: 1px solid var(--bdr);
+      font-size: 10px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--tx3);
+    }
+
+    /* ─── Track list ─────────────────────────────────────────── */
+    .tlist { flex: 1; overflow-y: auto; min-height: 0; }
+    .tlist::-webkit-scrollbar { width: 3px; }
+    .tlist::-webkit-scrollbar-thumb { background: var(--bdr2); }
+
+    .trow {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 14px;
+      border-bottom: 1px solid rgba(30, 40, 64, .3);
+      transition: background .1s;
+    }
+    .trow.click { cursor: pointer; }
+    .trow.click:hover { background: var(--el); }
+    .trow.dim { opacity: .4; }
+
+    /* Custom checkbox */
+    .ck {
+      appearance: none; -webkit-appearance: none;
+      width: 14px; height: 14px; flex-shrink: 0;
+      border: 1px solid var(--bdr2); border-radius: 2px;
+      background: var(--el2); cursor: pointer; position: relative;
+      transition: background .1s, border-color .1s;
+    }
+    .ck:checked { background: var(--am); border-color: var(--am); }
+    .ck:checked::after {
+      content: ''; position: absolute;
+      left: 3px; top: 0; width: 5px; height: 9px;
+      border: 2px solid #000; border-top: none; border-left: none;
+      transform: rotate(40deg);
+    }
+    .ck:disabled { opacity: .25; cursor: default; }
+
+    /* Badges */
+    .badge {
+      font-family: 'Rajdhani', sans-serif; font-weight: 600;
+      font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+      padding: 0 5px; border-radius: 2px; flex-shrink: 0; white-space: nowrap;
+    }
+    .ba { background: rgba(61, 214, 140, .1); color: var(--grn); border: 1px solid rgba(61, 214, 140, .22); }
+    .bs { background: rgba(121, 184, 255, .1); color: var(--blu); border: 1px solid rgba(121, 184, 255, .22); }
+    .bv { background: rgba(255, 123, 114, .1); color: var(--red); border: 1px solid rgba(255, 123, 114, .22); }
+    .bu { background: rgba(94, 106, 130, .1); color: var(--tx2); border: 1px solid var(--bdr); }
+
+    .ticon { font-size: 12px; flex-shrink: 0; }
+    .tlbl {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx);
+      flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ─── Options / toggles ──────────────────────────────────── */
+    .opts {
+      flex-shrink: 0;
+      padding: 10px 14px;
+      background: var(--srf); border-top: 1px solid var(--bdr);
+    }
+    .opts-lbl {
+      font-size: 10px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--tx3); margin-bottom: 7px;
+    }
+    .orow { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; user-select: none; }
+
+    .tog {
+      width: 30px; height: 16px; border-radius: 8px; flex-shrink: 0;
+      background: var(--el2); border: 1px solid var(--bdr2); position: relative;
+      transition: background .15s, border-color .15s;
+    }
+    .tog::after {
+      content: ''; position: absolute;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--tx2); top: 2px; left: 2px;
+      transition: transform .15s, background .15s;
+    }
+    .tog.on { background: rgba(240, 160, 32, .12); border-color: var(--am); }
+    .tog.on::after { background: var(--am); transform: translateX(14px); }
+
+    .olbl { font-size: 13px; font-weight: 500; color: var(--tx2); }
+    .tog.on ~ .olbl { color: var(--tx); }
+
+    /* ─── Action bar ─────────────────────────────────────────── */
+    .abar {
+      background: var(--srf); border-top: 1px solid var(--bdr);
+      padding: 13px 22px;
+      display: flex; align-items: flex-start; gap: 16px;
+    }
+
+    .btn-remux {
+      flex-shrink: 0;
+      font-family: 'Rajdhani', sans-serif; font-weight: 700;
+      font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 9px 26px; background: var(--am); color: #000;
+      border: none; border-radius: 3px; cursor: pointer;
+      transition: filter .15s, box-shadow .15s; white-space: nowrap;
+    }
+    .btn-remux:hover:not([disabled]) {
+      filter: brightness(1.14);
+      box-shadow: 0 0 20px rgba(240, 160, 32, .35);
+    }
+    .btn-remux[disabled] { background: var(--el2); color: var(--tx3); cursor: not-allowed; }
+
+    /* Job status area */
+    .jarea { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
+    .jrow  { display: flex; align-items: center; gap: 8px; }
+
+    .jdot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--bdr2); }
+    .jdot.starting { background: var(--tx2); }
+    .jdot.running  { background: var(--am); animation: blink 1.2s ease infinite; }
+    .jdot.done     { background: var(--grn); }
+    .jdot.error    { background: var(--red); }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+    .prog-track { flex: 1; height: 3px; background: var(--el2); border-radius: 2px; overflow: hidden; }
+    .prog-fill  { height: 100%; background: var(--am); border-radius: 2px; transition: width .4s ease; }
+    .prog-fill.running {
+      background: linear-gradient(90deg, var(--am) 0%, #fde68a 50%, var(--am) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s linear infinite;
+    }
+    @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+
+    .jtxt { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx2); flex-shrink: 0; }
+    .jtxt.done  { color: var(--grn); }
+    .jtxt.error { color: var(--red); }
+
+    .log {
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+      color: #4ade80; line-height: 1.6;
+      background: #040509; border: 1px solid var(--bdr); border-radius: 3px;
+      padding: 5px 10px; overflow-y: auto;
+      white-space: pre-wrap; word-break: break-all; max-height: 72px;
+    }
+    .log::-webkit-scrollbar { width: 3px; }
+    .log::-webkit-scrollbar-thumb { background: #0a150a; }
+
+    .hint { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx3); margin-top: 10px; }
+
+    /* Spinner */
+    .spin {
+      display: inline-block; width: 12px; height: 12px;
+      border: 1.5px solid var(--bdr2); border-top-color: var(--am);
+      border-radius: 50%; animation: rot .6s linear infinite;
+    }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    /* Empty state */
+    .empty {
+      text-align: center; padding: 24px 16px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--tx3);
+    }
+
+    /* Global thin scrollbar */
+    * { scrollbar-width: thin; scrollbar-color: var(--bdr2) transparent; }
+  </style>
+</head>
+<body>
+  <div class="app" x-data="animux()" x-cloak>
+
+    <!-- ══ HEADER ═══════════════════════════════════════════ -->
+    <header class="hdr">
+      <span class="logo">AniMux</span>
+      <span class="hdr-sep">·</span>
+      <span class="tagline">MKV track transfer without re-encoding</span>
+      <span class="hdr-pill">mkvmerge</span>
+    </header>
+
+    <!-- ══ PANELS ════════════════════════════════════════════ -->
+    <div class="panels">
+
+      <!-- ── SOURCE ───────────────────────────────────────── -->
+      <div class="panel">
+        <div class="phdr">
+          <span class="ptitle">Source</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="spin" x-show="loading.source || loading.srcProbe"></span>
+            <button class="btn-xs" @click="loadFiles('source')">↻ refresh</button>
+          </div>
+        </div>
+
+        <!-- File list -->
+        <div class="flist" :class="{ compressed: selectedSource }">
+          <div class="empty" x-show="!loading.source && sourceFiles.length === 0">
+            no .mkv files found
+          </div>
+          <template x-for="f in sourceFiles" :key="f.path">
+            <div class="frow" :class="{ active: selectedSource?.path === f.path }" @click="probeFile('source', f)">
+              <span class="frow-ico">▸</span>
+              <span style="flex:1;min-width:0">
+                <span class="fname" x-text="fname(f.path)"></span>
+                <span class="fsubdir" x-show="fdir(f.path)" x-text="fdir(f.path)"></span>
+              </span>
+              <span class="fsize" x-text="fmtSz(f.size)"></span>
+            </div>
+          </template>
+        </div>
+
+        <!-- Tracks section header -->
+        <div class="shdr" x-show="selectedSource">
+          <span>Tracks</span>
+          <span x-text="selectedTrackIds.length + '/' + sourceTracks.filter(t => t.type !== 'video').length + ' sel'"></span>
+        </div>
+
+        <!-- Source track list (with checkboxes) -->
+        <div class="tlist" x-show="selectedSource">
+          <div class="empty" x-show="!loading.srcProbe && sourceTracks.length === 0">no tracks found</div>
+          <template x-for="t in sourceTracks" :key="t.id">
+            <div class="trow click" @click="toggleTrack(t.id)">
+              <input type="checkbox" class="ck"
+                :checked="isSel(t.id)"
+                :disabled="t.type === 'video'"
+                @click.stop="toggleTrack(t.id)">
+              <span class="badge" :class="bCls(t.type)" x-text="bLbl(t.type)"></span>
+              <span class="ticon" x-text="tIco(t.type)"></span>
+              <span class="tlbl" x-text="tLbl(t)"></span>
+            </div>
+          </template>
+        </div>
+
+        <!-- Transfer options (source only) -->
+        <div class="opts" x-show="selectedSource">
+          <div class="opts-lbl">Transfer with</div>
+          <div class="orow" @click="options.chapters = !options.chapters">
+            <div class="tog" :class="{ on: options.chapters }"></div>
+            <span class="olbl">Chapters</span>
+          </div>
+          <div class="orow" @click="options.attachments = !options.attachments">
+            <div class="tog" :class="{ on: options.attachments }"></div>
+            <span class="olbl">Attachments (fonts)</span>
+          </div>
+          <div class="orow" @click="options.tags = !options.tags">
+            <div class="tog" :class="{ on: options.tags }"></div>
+            <span class="olbl">Tags</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vertical divider -->
+      <div class="vdiv"></div>
+
+      <!-- ── DESTINATION ────────────────────────────────────── -->
+      <div class="panel">
+        <div class="phdr">
+          <span class="ptitle">Destination</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="spin" x-show="loading.dest || loading.dstProbe"></span>
+            <button class="btn-xs" @click="loadFiles('destination')">↻ refresh</button>
+          </div>
+        </div>
+
+        <!-- File list -->
+        <div class="flist" :class="{ compressed: selectedDest }">
+          <div class="empty" x-show="!loading.dest && destFiles.length === 0">
+            no .mkv files found
+          </div>
+          <template x-for="f in destFiles" :key="f.path">
+            <div class="frow" :class="{ active: selectedDest?.path === f.path }" @click="probeFile('destination', f)">
+              <span class="frow-ico">▸</span>
+              <span style="flex:1;min-width:0">
+                <span class="fname" x-text="fname(f.path)"></span>
+                <span class="fsubdir" x-show="fdir(f.path)" x-text="fdir(f.path)"></span>
+              </span>
+              <span class="fsize" x-text="fmtSz(f.size)"></span>
+            </div>
+          </template>
+        </div>
+
+        <!-- Tracks section header -->
+        <div class="shdr" x-show="selectedDest">
+          <span>Existing Tracks</span>
+          <span x-text="destTracks.length + ' track' + (destTracks.length !== 1 ? 's' : '')"></span>
+        </div>
+
+        <!-- Destination track list (read-only) -->
+        <div class="tlist" x-show="selectedDest">
+          <div class="empty" x-show="!loading.dstProbe && destTracks.length === 0">no tracks found</div>
+          <template x-for="t in destTracks" :key="t.id">
+            <div class="trow dim">
+              <span class="badge" :class="bCls(t.type)" x-text="bLbl(t.type)"></span>
+              <span class="ticon" x-text="tIco(t.type)"></span>
+              <span class="tlbl" x-text="tLbl(t)"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+    </div><!-- /panels -->
+
+    <!-- ══ ACTION BAR ════════════════════════════════════════ -->
+    <div class="abar">
+      <button class="btn-remux" :disabled="!canRemux()" @click="startRemux()">
+        Start Remux
+      </button>
+
+      <!-- Job progress (shown when a job exists) -->
+      <div class="jarea" x-show="job">
+        <div class="jrow">
+          <span class="jdot" :class="job?.status || ''"></span>
+          <div class="prog-track">
+            <div class="prog-fill"
+              :class="{ running: job?.status === 'running' }"
+              :style="`width:${job?.progress_pct || 0}%`">
+            </div>
+          </div>
+          <span class="jtxt"
+            :class="{ done: job?.status === 'done', error: job?.status === 'error' }"
+            x-text="statusTxt()">
+          </span>
+        </div>
+        <div class="log" x-ref="logArea" x-text="logTxt()"></div>
+      </div>
+
+      <!-- Hint text (shown when no job) -->
+      <span class="hint" x-show="!job" x-text="hint()"></span>
+    </div>
+
+  </div><!-- /app -->
+
+  <script>
+    function animux() {
+      return {
+        sourceFiles: [],
+        destFiles: [],
+        selectedSource: null,
+        selectedDest: null,
+        sourceTracks: [],
+        destTracks: [],
+        selectedTrackIds: [],   // ponytail: array behaves as set; Alpine needs array for reactivity
+        options: { chapters: true, attachments: true, tags: false },
+        job: null,
+        polling: null,
+        loading: { source: false, dest: false, srcProbe: false, dstProbe: false },
+
+        async init() {
+          await Promise.all([this.loadFiles('source'), this.loadFiles('destination')]);
+        },
+
+        async loadFiles(dir) {
+          const k = dir === 'source' ? 'source' : 'dest';
+          this.loading[k] = true;
+          try {
+            const r = await fetch(`/api/files?dir=${dir}`);
+            if (!r.ok) return;
+            const files = await r.json();
+            if (dir === 'source') this.sourceFiles = files;
+            else this.destFiles = files;
+          } catch (_) {
+          } finally {
+            this.loading[k] = false;
+          }
+        },
+
+        async probeFile(dir, file) {
+          const src = dir === 'source';
+          const pk  = src ? 'srcProbe' : 'dstProbe';
+          if (src) {
+            this.selectedSource   = file;
+            this.sourceTracks     = [];
+            this.selectedTrackIds = [];
+          } else {
+            this.selectedDest = file;
+            this.destTracks   = [];
+          }
+          this.loading[pk] = true;
+          try {
+            const r = await fetch(`/api/probe?dir=${dir}&path=${encodeURIComponent(file.path)}`);
+            if (!r.ok) return;
+            const d = await r.json();
+            const tracks = d.tracks || [];
+            if (src) {
+              this.sourceTracks     = tracks;
+              // auto-select all non-video tracks
+              this.selectedTrackIds = tracks.filter(t => t.type !== 'video').map(t => t.id);
+            } else {
+              this.destTracks = tracks;
+            }
+          } catch (_) {
+          } finally {
+            this.loading[pk] = false;
+          }
+        },
+
+        toggleTrack(id) {
+          const t = this.sourceTracks.find(t => t.id === id);
+          if (!t || t.type === 'video') return;
+          const i = this.selectedTrackIds.indexOf(id);
+          if (i === -1) this.selectedTrackIds.push(id);
+          else this.selectedTrackIds.splice(i, 1);
+        },
+
+        isSel(id) {
+          return this.selectedTrackIds.includes(id);
+        },
+
+        canRemux() {
+          if (!this.selectedSource || !this.selectedDest) return false;
+          const hasContent = this.selectedTrackIds.length > 0
+            || this.options.chapters || this.options.attachments || this.options.tags;
+          if (!hasContent) return false;
+          if (this.job && !['done', 'error'].includes(this.job.status)) return false;
+          return true;
+        },
+
+        async startRemux() {
+          if (!this.canRemux()) return;
+          this.job = { id: null, status: 'starting', progress_pct: 0, log_tail: [], error: null };
+          try {
+            const r = await fetch('/api/remux', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                source_path:  this.selectedSource.path,
+                dest_path:    this.selectedDest.path,
+                track_ids:    this.selectedTrackIds,
+                chapters:     this.options.chapters,
+                attachments:  this.options.attachments,
+                tags:         this.options.tags,
+              }),
+            });
+            if (!r.ok) {
+              const e = await r.json().catch(() => ({}));
+              this.job = { ...this.job, status: 'error', error: e.detail || 'Request failed' };
+              return;
+            }
+            const { job_id } = await r.json();
+            this.job = { ...this.job, id: job_id, status: 'running' };
+            this.startPolling();
+          } catch (e) {
+            this.job = { ...this.job, status: 'error', error: e.message };
+          }
+        },
+
+        startPolling() {
+          if (this.polling) clearInterval(this.polling);
+          this.polling = setInterval(async () => {
+            if (!this.job?.id) return;
+            try {
+              const r = await fetch(`/api/jobs/${this.job.id}`);
+              if (!r.ok) return;
+              const d = await r.json();
+              this.job = { ...this.job, ...d };
+              this.$nextTick(() => {
+                const el = this.$refs.logArea;
+                if (el) el.scrollTop = el.scrollHeight;
+              });
+              if (['done', 'error'].includes(d.status)) {
+                clearInterval(this.polling);
+                this.polling = null;
+                if (d.status === 'done') this.loadFiles('destination');
+              }
+            } catch (_) {}
+          }, 500);
+        },
+
+        // ── Helpers ────────────────────────────────────────
+        fname(p) {
+          return p ? p.replace(/\\/g, '/').split('/').pop() : '';
+        },
+        fdir(p) {
+          if (!p) return '';
+          const parts = p.replace(/\\/g, '/').split('/');
+          return parts.length > 1 ? parts.slice(0, -1).join('/') : '';
+        },
+        fmtSz(b) {
+          if (!b) return '';
+          if (b >= 1e9) return (b / 1e9).toFixed(1) + ' GB';
+          if (b >= 1e6) return (b / 1e6).toFixed(1) + ' MB';
+          return (b / 1e3).toFixed(0) + ' KB';
+        },
+
+        bCls(type) {
+          return { audio: 'ba', subtitles: 'bs', subtitle: 'bs', video: 'bv' }[type] ?? 'bu';
+        },
+        bLbl(type) {
+          return { audio: 'Audio', subtitles: 'Sub', subtitle: 'Sub', video: 'Video' }[type] ?? (type || '?');
+        },
+        tIco(type) {
+          return { audio: '🔊', subtitles: '💬', subtitle: '💬', video: '🎬' }[type] ?? '▪';
+        },
+        tLbl(t) {
+          const p = [];
+          if (t.language && t.language !== 'und') p.push(t.language.toUpperCase());
+          if (t.codec)  p.push(t.codec);
+          if (t.name)   p.push(`"${t.name}"`);
+          return p.join(' · ') || '(unnamed)';
+        },
+
+        statusTxt() {
+          if (!this.job) return '';
+          return {
+            starting: 'Starting…',
+            running:  `${this.job.progress_pct || 0}%`,
+            done:     'Done ✓',
+            error:    `Error: ${this.job.error || 'unknown'}`,
+          }[this.job.status] ?? this.job.status;
+        },
+        logTxt() {
+          const t = this.job?.log_tail;
+          if (!t) return '';
+          return Array.isArray(t) ? t.join('\n') : String(t);
+        },
+        hint() {
+          if (!this.selectedSource && !this.selectedDest) return 'select source and destination files to begin';
+          if (!this.selectedSource) return 'select a source file ←';
+          if (!this.selectedDest)   return 'select a destination file →';
+          if (!this.selectedTrackIds.length && !this.options.chapters && !this.options.attachments && !this.options.tags)
+            return 'select at least one track or option to transfer';
+          return `${this.selectedTrackIds.length} track(s) selected  ·  ${this.fname(this.selectedSource.path)}  →  ${this.fname(this.selectedDest.path)}`;
+        },
+      };
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

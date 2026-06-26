@@ -1,0 +1,12 @@
+services:
+  animux:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - /your/source:/source:ro
+      - /your/destination:/destination:rw
+    environment:
+      - SOURCE_DIR=/source
+      - DEST_DIR=/destination
+    restart: unless-stopped
