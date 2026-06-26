@@ -175,7 +175,6 @@
     /* ─── Section divider ────────────────────────────────────── */
     .shdr {
       flex-shrink: 0;
-      display: flex; align-items: center; justify-content: space-between;
       padding: 5px 14px;
       background: var(--srf);
       border-top: 1px solid var(--bdr); border-bottom: 1px solid var(--bdr);
@@ -197,6 +196,24 @@
     .trow.click { cursor: pointer; }
     .trow.click:hover { background: var(--el); }
     .trow.dim { opacity: .4; }
+    .trow-master {
+      background: var(--srf);
+      border-bottom: 1px solid var(--bdr);
+      flex-shrink: 0;
+    }
+    .master-lbl {
+      flex: 1; min-width: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--tx2);
+    }
+    .sel-count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; color: var(--tx2);
+      font-variant-numeric: tabular-nums;
+      min-width: 7ch;
+      text-align: right;
+      flex-shrink: 0;
+    }
 
     /* Custom checkbox */
     .ck {
@@ -214,6 +231,12 @@
       transform: rotate(40deg);
     }
     .ck:disabled { opacity: .25; cursor: default; }
+    .ck.indeterminate { background: var(--am); border-color: var(--am); }
+    .ck.indeterminate::after {
+      content: ''; position: absolute;
+      left: 3px; right: 3px; top: 6px; height: 2px;
+      background: #000; border: none; transform: none;
+    }
 
     /* Badges */
     .badge {
@@ -386,13 +409,20 @@
         </div>
 
         <!-- Tracks section header -->
-        <div class="shdr" x-show="selectedSource">
-          <span>Tracks</span>
-          <span x-text="selectedTrackIds.length + '/' + sourceTracks.filter(t => t.type !== 'video').length + ' sel'"></span>
-        </div>
+        <div class="shdr" x-show="selectedSource">Tracks</div>
 
         <!-- Source track list (with checkboxes) -->
         <div class="tlist" x-show="selectedSource">
+          <div class="trow trow-master click" x-show="selectableTracks(sourceTracks).length"
+            @click="toggleAllSource()">
+            <input type="checkbox" class="ck"
+              :class="{ indeterminate: someSourceSelected() }"
+              :checked="allSourceSelected()"
+              @click.stop="toggleAllSource()">
+            <span class="master-lbl">Select all</span>
+            <span class="sel-count"
+              x-text="fmtSelCount(selectedTrackIds.length, selectableTracks(sourceTracks).length)"></span>
+          </div>
           <div class="empty" x-show="!loading.srcProbe && sourceTracks.length === 0">no tracks found</div>
           <template x-for="t in sourceTracks" :key="t.id">
             <div class="trow click" @click="toggleTrack(t.id)">
@@ -464,13 +494,20 @@
         </div>
 
         <!-- Tracks section header -->
-        <div class="shdr" x-show="selectedDest">
-          <span>Tracks</span>
-          <span x-text="selectedDestTrackIds.length + '/' + destTracks.filter(t => t.type !== 'video').length + ' sel'"></span>
-        </div>
+        <div class="shdr" x-show="selectedDest">Tracks</div>
 
         <!-- Destination track list -->
         <div class="tlist" x-show="selectedDest">
+          <div class="trow trow-master click" x-show="selectableTracks(destTracks).length"
+            @click="toggleAllDest()">
+            <input type="checkbox" class="ck"
+              :class="{ indeterminate: someDestSelected() }"
+              :checked="allDestSelected()"
+              @click.stop="toggleAllDest()">
+            <span class="master-lbl">Select all</span>
+            <span class="sel-count"
+              x-text="fmtSelCount(selectedDestTrackIds.length, selectableTracks(destTracks).length)"></span>
+          </div>
           <div class="empty" x-show="!loading.dstProbe && destTracks.length === 0">no tracks found</div>
           <template x-for="t in destTracks" :key="t.id">
             <div class="trow" :class="{ click: t.type !== 'video' }" @click="toggleDestTrack(t.id)">
@@ -574,12 +611,11 @@
             const d = await r.json();
             const tracks = d.tracks || [];
             if (src) {
-              this.sourceTracks     = tracks;
-              // auto-select all non-video tracks
-              this.selectedTrackIds = tracks.filter(t => t.type !== 'video').map(t => t.id);
+              this.sourceTracks = tracks;
+              this.selectAllSource();
             } else {
-              this.destTracks             = tracks;
-              this.selectedDestTrackIds   = tracks.filter(t => t.type !== 'video').map(t => t.id);
+              this.destTracks = tracks;
+              this.selectAllDest();
             }
           } catch (_) {
           } finally {
@@ -601,6 +637,62 @@
           const i = this.selectedDestTrackIds.indexOf(id);
           if (i === -1) this.selectedDestTrackIds.push(id);
           else this.selectedDestTrackIds.splice(i, 1);
+        },
+
+        selectableTracks(tracks) {
+          return tracks.filter(t => t.type !== 'video');
+        },
+
+        selectAllSource() {
+          this.selectedTrackIds = this.selectableTracks(this.sourceTracks).map(t => t.id);
+        },
+
+        selectNoneSource() {
+          this.selectedTrackIds = [];
+        },
+
+        selectAllDest() {
+          this.selectedDestTrackIds = this.selectableTracks(this.destTracks).map(t => t.id);
+        },
+
+        selectNoneDest() {
+          this.selectedDestTrackIds = [];
+        },
+
+        allSourceSelected() {
+          const n = this.selectableTracks(this.sourceTracks).length;
+          return n > 0 && this.selectedTrackIds.length === n;
+        },
+
+        someSourceSelected() {
+          const n = this.selectableTracks(this.sourceTracks).length;
+          const s = this.selectedTrackIds.length;
+          return s > 0 && s < n;
+        },
+
+        toggleAllSource() {
+          this.allSourceSelected() ? this.selectNoneSource() : this.selectAllSource();
+        },
+
+        allDestSelected() {
+          const n = this.selectableTracks(this.destTracks).length;
+          return n > 0 && this.selectedDestTrackIds.length === n;
+        },
+
+        someDestSelected() {
+          const n = this.selectableTracks(this.destTracks).length;
+          const s = this.selectedDestTrackIds.length;
+          return s > 0 && s < n;
+        },
+
+        toggleAllDest() {
+          this.allDestSelected() ? this.selectNoneDest() : this.selectAllDest();
+        },
+
+        fmtSelCount(sel, total) {
+          const w = Math.max(String(total).length, 2);
+          const pad = n => String(n).padStart(w, '\u00a0');
+          return `${pad(sel)}/${pad(total)}`;
         },
 
         isSel(id) {
