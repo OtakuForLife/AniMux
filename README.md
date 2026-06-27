@@ -89,10 +89,35 @@ After that, **AniMux** appears in the template dropdown when adding a container.
 
 1. **Source** — browse and select the MKV you want to copy tracks *from*.
 2. **Destination** — browse and select the MKV you want to update.
-3. **Pick destination tracks** — choose which existing audio/subtitle tracks to keep (video is always kept).
-4. **Pick source tracks** — choose which audio/subtitle tracks to add, plus optional chapters, attachments (fonts), and tags.
-5. **Start** — AniMux runs `mkvmerge` in the background; a progress bar and live log show the status.
-6. On success the destination file is atomically replaced (written to a temp file first, then swapped in — no half-written files).
+3. **Pick destination tracks** — choose which existing audio/subtitle tracks to keep (video is always kept). Set per-track sync offsets (ms) if needed.
+4. **Pick source tracks** — choose which audio/subtitle tracks to add, plus optional chapters, attachments (fonts), and tags. Adjust sync offsets per track.
+
+### Preview (sync check)
+
+Preview renders a **short window** (default ±30 seconds around the playhead) from the destination video, without muxing the full file.
+
+1. Click **Preview** — creates a session and loads the window at the start.
+2. **Scrub** the timeline to any point in the full file, then **Load window**.
+3. Pick **audio** and **subtitle** tracks from dropdowns:
+   - Text subs (ASS/SRT) switch **instantly** via WebVTT sidecars.
+   - Audio switches use cached clips when possible (~seconds otherwise).
+   - PGS/bitmap subs are burned in for that window (~seconds per switch).
+4. Adjust sync offsets on tracks, reload the window, and repeat.
+5. **Apply** when ready — lossless full-file mkvmerge.
+
+| Env var | Default | Purpose |
+|---|---|---|
+| `PREVIEW_WINDOW` | `30` | Seconds before/after playhead |
+| `PREVIEW_CACHE_DIR` | `/tmp/animux-preview` | On-disk render cache |
+
+### Dependencies
+
+| Tool | Role |
+|---|---|
+| `mkvmerge` | Lossless remux for Apply |
+| `ffmpeg` | Windowed preview encode only — not used for the final output |
+
+On **Apply**, the destination file is atomically replaced (temp file first, then swapped in).
 
 ---
 

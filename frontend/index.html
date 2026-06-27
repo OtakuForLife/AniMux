@@ -55,6 +55,17 @@
       overflow: hidden;
     }
 
+    /* Main workspace: panels + optional preview sidebar */
+    .body-main {
+      display: grid;
+      grid-template-columns: 1fr;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .body-main.preview-open {
+      grid-template-columns: 1fr minmax(320px, 36%);
+    }
+
     /* ─── Header ─────────────────────────────────────────────── */
     .hdr {
       display: flex; align-items: center; gap: 10px;
@@ -300,6 +311,290 @@
       flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
 
+    /* ─── Preview sidebar ─────────────────────────────────────── */
+    .preview-side {
+      display: flex;
+      flex-direction: column;
+      border-left: 1px solid var(--bdr);
+      background: var(--srf);
+      min-height: 0;
+      overflow: hidden;
+    }
+    .preview-side-inner {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+    }
+    .preview-hdr {
+      display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .preview-title {
+      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--tx2);
+    }
+    .preview-hint {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: var(--tx3); line-height: 1.45;
+    }
+    .player-frame {
+      border: 1px solid var(--bdr);
+      border-radius: 4px;
+      overflow: hidden;
+      background: #000;
+      flex-shrink: 0;
+    }
+    .player-viewport {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #000;
+    }
+    .preview-player {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #000;
+    }
+    .preview-player::cue {
+      background: rgba(0, 0, 0, .72);
+      color: #fff;
+      font-size: 1.05em;
+    }
+    .sub-overlay {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 8%;
+      z-index: 1;
+      padding: 0 14px;
+      text-align: center;
+      color: #fff;
+      font-size: clamp(14px, 2.2vw, 22px);
+      line-height: 1.35;
+      white-space: pre-wrap;
+      pointer-events: none;
+      text-shadow: 0 1px 2px #000, 0 0 10px rgba(0, 0, 0, .85);
+    }
+    .preview-player.is-dimmed {
+      opacity: 0.35;
+    }
+    .player-loading {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(0, 0, 0, .72);
+    }
+    .player-loading-txt {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--tx2);
+    }
+    .loading-bar {
+      width: 140px;
+      height: 3px;
+      background: var(--bdr2);
+      border-radius: 2px;
+      overflow: hidden;
+      flex: none;
+    }
+    .loading-bar-fill {
+      height: 100%;
+      background: var(--am);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    .player-idle {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--tx3);
+      pointer-events: none;
+    }
+    .player-controls {
+      background: var(--el);
+      border-top: 1px solid var(--bdr);
+      padding: 8px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .player-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .timeline {
+      flex: 1;
+      min-width: 0;
+      height: 20px;
+      padding: 7px 0;
+      cursor: pointer;
+      touch-action: none;
+    }
+    .timeline-rail {
+      position: relative;
+      height: 6px;
+      background: var(--bdr2);
+      border-radius: 3px;
+    }
+    .timeline-cached {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      background: rgba(61, 214, 140, .4);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    .timeline-current {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      background: rgba(240, 160, 32, .55);
+      border-radius: 3px 0 0 3px;
+      pointer-events: none;
+    }
+    .timeline-head {
+      position: absolute;
+      top: 50%;
+      width: 13px;
+      height: 13px;
+      margin: -6.5px 0 0 -6.5px;
+      background: var(--am);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(0, 0, 0, .45);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .pc-btn {
+      font-size: 14px;
+      line-height: 1;
+      padding: 4px 10px;
+      background: var(--el2);
+      border: 1px solid var(--bdr);
+      border-radius: 2px;
+      color: var(--tx);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .pc-btn:hover:not([disabled]) { border-color: var(--am); color: var(--am); }
+    .pc-btn[disabled] { opacity: .4; cursor: not-allowed; }
+    .player-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--tx2);
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .preview-tracks {
+      display: flex; flex-direction: column; gap: 6px;
+      flex-shrink: 0;
+    }
+    .preview-tracks-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .preview-field { display: flex; flex-direction: column; gap: 3px; }
+    .preview-select {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: var(--tx); background: var(--el2);
+      border: 1px solid var(--bdr); border-radius: 2px;
+      padding: 5px 6px; width: 100%;
+    }
+    .preview-lbl {
+      font-size: 10px; color: var(--tx3); letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .preview-range-lbl {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--am);
+    }
+    .sync-panel {
+      border: 1px solid var(--bdr);
+      border-radius: 3px;
+      background: var(--el);
+      flex-shrink: 0;
+    }
+    .sync-panel-hdr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--bdr);
+      font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--tx3);
+    }
+    .sync-apply {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border: 1px solid var(--am);
+      border-radius: 2px;
+      background: rgba(255, 180, 60, .08);
+      color: var(--am);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .sync-apply:hover:not(:disabled) { background: rgba(255, 180, 60, .16); }
+    .sync-apply:disabled { opacity: .45; cursor: not-allowed; }
+    .sync-list { max-height: 140px; overflow-y: auto; }
+    .sync-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px;
+      border-bottom: 1px solid rgba(30, 40, 64, .35);
+    }
+    .sync-row:last-child { border-bottom: none; }
+    .sync-name {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: var(--tx); flex: 1; min-width: 0;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .sync-side {
+      font-size: 9px; color: var(--tx3); flex-shrink: 0;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .toff {
+      width: 64px; flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      color: var(--tx2); background: var(--el2);
+      border: 1px solid var(--bdr); border-radius: 2px;
+      padding: 3px 5px; text-align: right;
+      outline: none;
+    }
+    .toff:focus { border-color: var(--am); color: var(--tx); }
+    .toff-lbl {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px;
+      color: var(--tx3); flex-shrink: 0;
+    }
+    .preview-status {
+      display: flex; align-items: center; gap: 8px;
+      flex-shrink: 0;
+    }
+    .preview-status .prog-track { flex: 1; }
+    .preview-empty {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--tx3); text-align: center; padding: 24px;
+    }
+
     /* ─── Options / toggles ──────────────────────────────────── */
     .opts {
       flex-shrink: 0;
@@ -351,6 +646,22 @@
     }
     .btn-remux[disabled] { background: var(--el2); color: var(--tx3); cursor: not-allowed; }
 
+    .btn-preview {
+      flex-shrink: 0;
+      font-family: 'Rajdhani', sans-serif; font-weight: 600;
+      font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 9px 20px; background: var(--el2); color: var(--tx);
+      border: 1px solid var(--bdr2); border-radius: 3px; cursor: pointer;
+      transition: color .15s, border-color .15s, background .15s; white-space: nowrap;
+    }
+    .btn-preview:hover:not([disabled]) {
+      color: var(--blu); border-color: var(--blu);
+      background: rgba(121, 184, 255, .06);
+    }
+    .btn-preview[disabled] { opacity: .45; cursor: not-allowed; }
+
+    .abar-btns { display: flex; gap: 10px; flex-shrink: 0; }
+
     /* Job status area */
     .jarea { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
     .jrow  { display: flex; align-items: center; gap: 8px; }
@@ -391,6 +702,10 @@
       border: 1.5px solid var(--bdr2); border-top-color: var(--am);
       border-radius: 50%; animation: rot .6s linear infinite;
     }
+    .spin-lg {
+      width: 32px; height: 32px;
+      border-width: 3px;
+    }
     @keyframes rot { to { transform: rotate(360deg); } }
 
     /* Empty state */
@@ -411,8 +726,11 @@
       <span class="logo">AniMux</span>
       <span class="hdr-sep">·</span>
       <span class="tagline">MKV track transfer without re-encoding</span>
-      <span class="hdr-pill">mkvmerge</span>
+      <span class="hdr-pill">mkvmerge · ffmpeg</span>
     </header>
+
+    <!-- ══ MAIN WORKSPACE ════════════════════════════════════ -->
+    <div class="body-main" :class="{ 'preview-open': previewSession || previewJob }">
 
     <!-- ══ PANELS ════════════════════════════════════════════ -->
     <div class="panels">
@@ -569,6 +887,119 @@
 
     </div><!-- /panels -->
 
+    <!-- ══ PREVIEW SIDEBAR ═══════════════════════════════════ -->
+    <aside class="preview-side" x-show="previewSession || previewJob">
+      <div class="preview-side-inner" x-show="previewSession">
+        <div class="preview-hdr">
+          <span class="preview-title">Preview</span>
+        </div>
+
+        <div class="player-frame">
+          <div class="player-viewport">
+            <video class="preview-player"
+              :class="{ 'is-dimmed': playerLoading }"
+              :src="previewVideoUrl || undefined"
+              x-ref="previewVideo"
+              @loadeddata="onVideoLoaded()"
+              @playing="updateSubCue()"
+              @timeupdate="onVideoTimeUpdate()"
+              @play="playerPlaying = true"
+              @pause="playerPlaying = false"
+              @ended="onVideoEnded()"></video>
+            <div class="sub-overlay" x-show="subCueText" x-text="subCueText"></div>
+            <div class="player-idle" x-show="!previewVideoUrl && !playerLoading">
+              Press ▶ to load preview
+            </div>
+            <div class="player-loading" x-show="playerLoading">
+              <span class="spin spin-lg"></span>
+              <span class="player-loading-txt" x-text="playerLoadingTxt()"></span>
+              <div class="loading-bar">
+                <div class="loading-bar-fill"
+                  :style="`width:${previewJob?.progress_pct || 0}%`"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="player-controls">
+            <div class="player-bar">
+              <button type="button" class="pc-btn" @click="togglePlay()"
+                :disabled="playerLoading"
+                x-text="playerPlaying ? '⏸' : '▶'" title="Play / pause"></button>
+              <div class="timeline" x-ref="timeline" @mousedown.prevent="onTimelineStart($event)">
+                <div class="timeline-rail">
+                  <template x-for="w in cachedWindows" :key="w.start + '-' + w.end">
+                    <div class="timeline-cached" :style="timelineSegStyle(w.start, w.end)"></div>
+                  </template>
+                  <div class="timeline-current" :style="timelineCurrentStyle()"></div>
+                  <div class="timeline-head" :style="timelineHeadStyle()"></div>
+                </div>
+              </div>
+              <span class="player-time"
+                x-text="fmtClock(playerPos) + ' / ' + fmtClock(previewSession?.duration_sec || 0)"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="preview-tracks">
+          <div class="preview-tracks-row">
+            <div class="preview-field">
+              <span class="preview-lbl">Audio</span>
+              <select class="preview-select" x-model="previewAudioKey" @change="switchPreviewAudio()">
+                <option value="">(none)</option>
+                <template x-for="t in previewSession?.audio_tracks || []" :key="t.key">
+                  <option :value="t.key" x-text="t.label"></option>
+                </template>
+              </select>
+            </div>
+            <div class="preview-field">
+              <span class="preview-lbl">Subtitles</span>
+              <select class="preview-select" x-model="previewSubKey"
+                @change="switchPreviewSub($event.target.value)">
+                <option value="">(none)</option>
+                <template x-for="t in previewSession?.sub_tracks || []" :key="t.key">
+                  <option :value="t.key" x-text="t.label + (t.bitmap ? ' · PGS' : '')"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="sync-panel" x-show="syncTracks().length">
+          <div class="sync-panel-hdr">
+            <span>Sync offsets (ms)</span>
+            <button type="button" class="sync-apply"
+              :disabled="playerLoading || !previewSession"
+              @click="applyOffsets()"
+              title="Re-render current window with these offsets">Apply</button>
+          </div>
+          <div class="sync-list">
+            <template x-for="item in syncTracks()" :key="item.side + ':' + item.track.id">
+              <div class="sync-row">
+                <span class="sync-side" x-text="item.side"></span>
+                <span class="sync-name" x-text="tLbl(item.track)"></span>
+                <input type="number" class="toff" step="50" placeholder="0"
+                  :value="trackOffset(item.side, item.track.id)"
+                  @input="setTrackOffset(item.side, item.track.id, $event.target.value)"
+                  @keydown.enter="applyOffsets()"
+                  title="+ delays track, − advances">
+                <span class="toff-lbl">ms</span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="preview-status" x-show="previewJob?.status === 'error'">
+          <span class="jdot error"></span>
+          <span class="jtxt error" x-text="previewStatusTxt()"></span>
+        </div>
+      </div>
+      <div class="preview-empty" x-show="previewJob && !previewSession">
+        Starting preview…
+      </div>
+    </aside>
+
+    </div><!-- /body-main -->
+
     <!-- ══ SELECTED FILES SUMMARY ═══════════════════════════ -->
     <div class="summary" x-show="!job">
       <div class="summary-col">
@@ -595,9 +1026,14 @@
 
     <!-- ══ ACTION BAR ════════════════════════════════════════ -->
     <div class="abar">
-      <button class="btn-remux" :disabled="!canRemux()" @click="startRemux()">
-        Start Remux
-      </button>
+      <div class="abar-btns">
+        <button class="btn-preview" :disabled="!canPreview()" @click="startPreview()">
+          Preview
+        </button>
+        <button class="btn-remux" :disabled="!canRemux()" @click="startRemux()">
+          Apply
+        </button>
+      </div>
 
       <!-- Job progress (shown when a job exists) -->
       <div class="jarea" x-show="job">
@@ -631,11 +1067,36 @@
         destTracks: [],
         selectedTrackIds: [],
         selectedDestTrackIds: [],
+        sourceTrackOffsets: {},
+        destTrackOffsets: {},
         sourceSearch: '',
         destSearch: '',
         options: { chapters: true, attachments: true, tags: false },
         job: null,
+        previewSession: null,
+        previewTime: 0,
+        previewAudioKey: '',
+        previewSubKey: '',
+        previewWindowStart: null,
+        previewWindowEnd: null,
+        previewJob: null,
+        previewVideoUrl: null,
+        previewVttTracks: [],
+        previewSubBitmap: false,
+        subCueText: '',
+        cachedWindows: [],
+        playerLoading: false,
+        playerPos: 0,
+        playerPlaying: false,
+        playerScrubbing: false,
+        _seekAfterLoad: null,
+        _playAfterLoad: false,
+        _vttCues: [],
+        _previewLoadGen: 0,
+        _vttLoadedGen: -1,
+        _vttAbort: null,
         polling: null,
+        previewPolling: null,
         loading: { source: false, dest: false, srcProbe: false, dstProbe: false },
 
         async init() {
@@ -664,11 +1125,19 @@
             this.selectedSource   = file;
             this.sourceTracks     = [];
             this.selectedTrackIds = [];
+            this.sourceTrackOffsets = {};
           } else {
             this.selectedDest     = file;
             this.destTracks       = [];
             this.selectedDestTrackIds = [];
+            this.destTrackOffsets = {};
           }
+          this.previewSession = null;
+          this.previewVideoUrl = null;
+          this.previewVttTracks = [];
+          this.previewJob = null;
+          this.previewWindowStart = null;
+          this.previewWindowEnd = null;
           this.loading[pk] = true;
           try {
             const r = await fetch(`/api/probe?dir=${dir}&path=${encodeURIComponent(file.path)}`);
@@ -768,13 +1237,236 @@
           return this.selectedDestTrackIds.includes(id);
         },
 
-        canRemux() {
+        trackOffset(side, id) {
+          const m = side === 'source' ? this.sourceTrackOffsets : this.destTrackOffsets;
+          const v = m[id];
+          return v === undefined || v === 0 ? '' : v;
+        },
+
+        setTrackOffset(side, id, raw) {
+          const m = side === 'source' ? this.sourceTrackOffsets : this.destTrackOffsets;
+          const n = parseInt(raw, 10);
+          if (!raw || raw === '-' || Number.isNaN(n) || n === 0) {
+            delete m[id];
+          } else {
+            m[id] = n;
+          }
+        },
+
+        offsetPayload(side) {
+          const m = side === 'source' ? this.sourceTrackOffsets : this.destTrackOffsets;
+          const out = {};
+          for (const [id, ms] of Object.entries(m)) {
+            if (ms) out[String(id)] = ms;
+          }
+          return out;
+        },
+
+        previewOffsetPayload(force = false) {
+          return {
+            source_track_offsets: this.offsetPayload('source'),
+            dest_track_offsets: this.offsetPayload('dest'),
+            force,
+          };
+        },
+
+        activeVttSrc() {
+          return this.vttUrlForKey(this.previewSubKey);
+        },
+
+        buildVttUrl(key) {
+          if (!key || !this.previewSession?.session_id) return '';
+          if (this.previewWindowStart == null || this.previewWindowEnd == null) return '';
+          const ws = Math.trunc(this.previewWindowStart * 1000);
+          const we = Math.trunc(this.previewWindowEnd * 1000);
+          return `/api/preview/files/${this.previewSession.session_id}/w_${ws}_${we}/sub_${key.replace(':', '_')}.vtt`;
+        },
+
+        vttUrlForKey(key) {
+          if (!key) return '';
+          const tr = (this.previewSession?.sub_tracks || []).find(t => t.key === key);
+          if (tr?.bitmap) return '';
+          const hit = this.previewVttTracks.find(v => v.key === key);
+          const base = hit?.url?.split('?')[0] || this.buildVttUrl(key);
+          return base ? `${base}?t=${Date.now()}` : '';
+        },
+
+        mergeVttTracks(incoming) {
+          const byKey = new Map(this.previewVttTracks.map(v => [v.key, v]));
+          for (const v of incoming || []) {
+            byKey.set(v.key, { ...v, url: `${v.url.split('?')[0]}?t=${Date.now()}` });
+          }
+          this.previewVttTracks = [...byKey.values()];
+        },
+
+        vttTime(raw) {
+          const s = raw.trim().replace(',', '.');
+          const parts = s.split(':').map(Number);
+          if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+          if (parts.length === 2) return parts[0] * 60 + parts[1];
+          return 0;
+        },
+
+        cleanSubText(text) {
+          return text
+            .replace(/\{[^}]*\}/g, '')
+            .replace(/\\N/g, '\n')
+            .replace(/\\n/g, '\n')
+            .replace(/<[^>]+>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .trim();
+        },
+
+        parseVtt(text) {
+          const cues = [];
+          const timeRe = /(\d{1,2}:)?\d{2}:\d{2}[.,]\d{3}\s*-->\s*(\d{1,2}:)?\d{2}:\d{2}[.,]\d{3}/;
+          for (const block of text.replace(/\r/g, '').split(/\n\n+/)) {
+            const m = block.match(timeRe);
+            if (!m) continue;
+            const [startS, endS] = m[0].split('-->').map(x => x.trim());
+            const start = this.vttTime(startS);
+            const end = this.vttTime(endS);
+            const idx = block.indexOf(m[0]);
+            const body = this.cleanSubText(block.slice(idx + m[0].length));
+            if (body) cues.push({ start, end, text: body });
+          }
+          return cues;
+        },
+
+        normalizeVttCues(cues) {
+          if (!cues.length || this.previewWindowStart == null) return cues;
+          const ws = this.previewWindowStart;
+          if (cues[0].start >= ws - 2) {
+            return cues.map(c => ({
+              start: c.start - ws,
+              end: c.end - ws,
+              text: c.text,
+            }));
+          }
+          return cues;
+        },
+
+        async fetchAndShowSubs(key, retries = 3) {
+          if (!key) {
+            this._vttCues = [];
+            this.subCueText = '';
+            return false;
+          }
+          const tr = (this.previewSession?.sub_tracks || []).find(t => t.key === key);
+          if (!tr || tr.bitmap) return false;
+
+          this.previewSubBitmap = false;
+          this._vttAbort?.abort();
+          const ac = new AbortController();
+          this._vttAbort = ac;
+
+          const url = this.vttUrlForKey(key);
+          if (!url) return false;
+
+          for (let attempt = 0; attempt < retries; attempt++) {
+            if (ac.signal.aborted) return false;
+            try {
+              const r = await fetch(url, { signal: ac.signal });
+              if (ac.signal.aborted) return false;
+              if (r.ok) {
+                let cues = this.parseVtt(await r.text());
+                cues = this.normalizeVttCues(cues);
+                if (ac.signal.aborted) return false;
+                this._vttCues = cues;
+                this.updateSubCue();
+                return cues.length > 0;
+              }
+              if (r.status === 404 && attempt < retries - 1) {
+                await new Promise(ok => setTimeout(ok, 300));
+                continue;
+              }
+              return false;
+            } catch (e) {
+              if (e.name === 'AbortError') return false;
+              if (attempt < retries - 1) {
+                await new Promise(ok => setTimeout(ok, 300));
+              }
+            }
+          }
+          return false;
+        },
+
+        beginPreviewReload() {
+          this._vttAbort?.abort();
+          this._previewLoadGen += 1;
+          this._vttLoadedGen = -1;
+          this.subCueText = '';
+          this._vttCues = [];
+        },
+
+        scheduleVttLoad() {
+          const gen = this._previewLoadGen;
+          if (this._vttLoadedGen === gen) return;
+          this._vttLoadedGen = gen;
+          if (this.previewSubKey) {
+            this.fetchAndShowSubs(this.previewSubKey);
+          }
+        },
+
+        updateSubCue() {
+          const v = this.$refs.previewVideo;
+          if (!v || this.previewSubBitmap || !this._vttCues.length) {
+            this.subCueText = '';
+            return;
+          }
+          const t = v.currentTime;
+          const cue = this._vttCues.find(c => t >= c.start && t < c.end);
+          this.subCueText = cue ? cue.text : '';
+        },
+
+        syncTracks() {
+          const out = [];
+          for (const id of this.selectedTrackIds) {
+            const t = this.sourceTracks.find(x => x.id === id);
+            if (t && t.type !== 'video') out.push({ side: 'source', track: t });
+          }
+          for (const id of this.selectedDestTrackIds) {
+            const t = this.destTracks.find(x => x.id === id);
+            if (t && t.type !== 'video') out.push({ side: 'dest', track: t });
+          }
+          return out;
+        },
+
+        transferPayload() {
+          return {
+            source_path:     this.selectedSource.path,
+            dest_path:       this.selectedDest.path,
+            track_ids:       this.selectedTrackIds,
+            dest_track_ids:  this.selectedDestTrackIds,
+            source_track_offsets: this.offsetPayload('source'),
+            dest_track_offsets:   this.offsetPayload('dest'),
+            chapters:        this.options.chapters,
+            attachments:     this.options.attachments,
+            tags:            this.options.tags,
+          };
+        },
+
+        jobRunning(job) {
+          return job && !['done', 'error'].includes(job.status);
+        },
+
+        canTransfer() {
           if (!this.selectedSource || !this.selectedDest) return false;
           if (!this.destTracks.length) return false;
           const hasContent = this.selectedTrackIds.length > 0
             || this.options.chapters || this.options.attachments || this.options.tags;
-          if (!hasContent) return false;
-          if (this.job && !['done', 'error'].includes(this.job.status)) return false;
+          return hasContent;
+        },
+
+        canRemux() {
+          if (!this.canTransfer()) return false;
+          if (this.jobRunning(this.job) || this.previewBusy()) return false;
+          return true;
+        },
+
+        canPreview() {
+          if (!this.canTransfer()) return false;
+          if (this.jobRunning(this.job) || this.previewBusy()) return false;
           return true;
         },
 
@@ -785,15 +1477,7 @@
             const r = await fetch('/api/remux', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                source_path:     this.selectedSource.path,
-                dest_path:       this.selectedDest.path,
-                track_ids:       this.selectedTrackIds,
-                dest_track_ids:  this.selectedDestTrackIds,
-                chapters:        this.options.chapters,
-                attachments:     this.options.attachments,
-                tags:            this.options.tags,
-              }),
+              body: JSON.stringify(this.transferPayload()),
             });
             if (!r.ok) {
               const e = await r.json().catch(() => ({}));
@@ -806,6 +1490,376 @@
           } catch (e) {
             this.job = { ...this.job, status: 'error', error: e.message };
           }
+        },
+
+        previewBusy() {
+          return this.jobRunning(this.previewJob);
+        },
+
+        async startPreview() {
+          if (!this.canPreview()) return;
+          this.previewSession = null;
+          this.previewVideoUrl = null;
+          this.previewVttTracks = [];
+          this.subCueText = '';
+          this._vttCues = [];
+          this.previewJob = { status: 'starting', progress_pct: 0 };
+          try {
+            const r = await fetch('/api/preview/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.transferPayload()),
+            });
+            if (!r.ok) {
+              const e = await r.json().catch(() => ({}));
+              this.previewJob = { status: 'error', error: e.detail || 'Session failed' };
+              return;
+            }
+            const d = await r.json();
+            this.previewSession = d;
+            this.previewTime = 0;
+            this.playerPos = 0;
+            this.previewAudioKey = d.audio_tracks?.[0]?.key || '';
+            this.previewSubKey = '';
+            this.previewJob = null;
+            await this.refreshCachedWindows();
+            await this.loadPreviewWindow(true);
+          } catch (e) {
+            this.previewJob = { status: 'error', error: e.message };
+          }
+        },
+
+        async loadPreviewWindow(autoPlay = false, force = false) {
+          if (!this.previewSession?.session_id) return;
+          this.beginPreviewReload();
+          this.pausePreviewVideo();
+          if (autoPlay) this._playAfterLoad = true;
+          this.previewJob = { status: 'running', progress_pct: 0 };
+          try {
+            const r = await fetch('/api/preview/window', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                session_id: this.previewSession.session_id,
+                t_sec: this.previewTime,
+                audio_key: this.previewAudioKey || null,
+                sub_key: this.previewSubKey || null,
+                ...this.previewOffsetPayload(force),
+              }),
+            });
+            if (!r.ok) {
+              const e = await r.json().catch(() => ({}));
+              this.playerLoading = false;
+              this.previewJob = { status: 'error', error: e.detail || 'Window failed' };
+              return;
+            }
+            const d = await r.json();
+            if (d.cached) {
+              this.applyPreviewResult(d);
+              this.previewJob = { status: 'done', progress_pct: 100 };
+              await this.refreshCachedWindows();
+            } else {
+              this.playerLoading = true;
+              this.previewJob = { id: d.job_id, status: 'running', progress_pct: 0 };
+              this.startPreviewPolling();
+            }
+          } catch (e) {
+            this.playerLoading = false;
+            this.previewJob = { status: 'error', error: e.message };
+          }
+        },
+
+        pausePreviewVideo() {
+          const v = this.$refs.previewVideo;
+          if (v && !v.paused) v.pause();
+          this.playerPlaying = false;
+        },
+
+        playerLoadingTxt() {
+          const pct = this.previewJob?.progress_pct;
+          return pct ? `Rendering ${pct}%…` : 'Rendering…';
+        },
+
+        reloadPreviewWindow() {
+          this.loadPreviewWindow(this.playerPlaying);
+        },
+
+        applyOffsets() {
+          if (!this.previewSession || this.playerLoading) return;
+          this.loadPreviewWindow(this.playerPlaying, true);
+        },
+
+        async refreshCachedWindows() {
+          if (!this.previewSession?.session_id) return;
+          try {
+            const r = await fetch(`/api/preview/session/${this.previewSession.session_id}/cache`);
+            if (r.ok) {
+              const d = await r.json();
+              this.cachedWindows = d.windows || [];
+            }
+          } catch (_) {}
+        },
+
+        timelineDur() {
+          return this.previewSession?.duration_sec || 1;
+        },
+
+        timelinePct() {
+          return Math.max(0, Math.min(100, (this.playerPos / this.timelineDur()) * 100));
+        },
+
+        timelineSegStyle(start, end) {
+          const dur = this.timelineDur();
+          const left = (start / dur) * 100;
+          const width = ((end - start) / dur) * 100;
+          return `left:${left}%;width:${width}%`;
+        },
+
+        timelineCurrentStyle() {
+          return `width:${this.timelinePct()}%`;
+        },
+
+        timelineHeadStyle() {
+          return `left:${this.timelinePct()}%`;
+        },
+
+        timelineTimeFromEvent(e) {
+          const el = this.$refs.timeline;
+          if (!el) return 0;
+          const rect = el.getBoundingClientRect();
+          const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          return pct * this.timelineDur();
+        },
+
+        onTimelineStart(e) {
+          if (e.button !== 0 || this.playerLoading) return;
+          this.playerScrubbing = true;
+          this.playerPos = this.timelineTimeFromEvent(e);
+          this.previewTime = this.playerPos;
+          const move = (ev) => {
+            this.playerPos = this.timelineTimeFromEvent(ev);
+            this.previewTime = this.playerPos;
+          };
+          const up = async () => {
+            window.removeEventListener('mousemove', move);
+            window.removeEventListener('mouseup', up);
+            this.playerScrubbing = false;
+            await this.onTimelineCommit();
+          };
+          window.addEventListener('mousemove', move);
+          window.addEventListener('mouseup', up);
+        },
+
+        isInCachedWindow(t) {
+          return this.cachedWindows.some(w => t >= w.start && t <= w.end);
+        },
+
+        isInActiveWindow(t) {
+          return this.previewWindowStart != null
+            && t >= this.previewWindowStart && t <= this.previewWindowEnd;
+        },
+
+        async onTimelineCommit() {
+          const t = this.playerPos;
+          this.previewTime = t;
+          if (this.isInActiveWindow(t) && this.previewVideoUrl && !this.playerLoading) {
+            const v = this.$refs.previewVideo;
+            if (v) {
+              v.currentTime = Math.max(0, t - this.previewWindowStart);
+              if (this.playerPlaying) v.play().catch(() => {});
+              return;
+            }
+          }
+          const wasPlaying = this.playerPlaying;
+          this.pausePreviewVideo();
+          this._seekAfterLoad = t;
+          await this.loadPreviewWindow(wasPlaying);
+        },
+
+        onVideoTimeUpdate() {
+          if (this.playerScrubbing) return;
+          const v = this.$refs.previewVideo;
+          if (!v || this.previewWindowStart == null) return;
+          if (!this.playerLoading) {
+            this.playerPos = this.previewWindowStart + v.currentTime;
+            this.previewTime = this.playerPos;
+          }
+          this.updateSubCue();
+        },
+
+        onVideoEnded() {
+          this.playerPlaying = false;
+        },
+
+        async togglePlay() {
+          if (!this.previewSession || this.playerLoading) return;
+          const v = this.$refs.previewVideo;
+          if (v && this.previewVideoUrl && !v.paused) {
+            v.pause();
+            return;
+          }
+          if (v && this.previewVideoUrl) {
+            await v.play().catch(() => {});
+            return;
+          }
+          this._playAfterLoad = true;
+          await this.loadPreviewWindow(true);
+        },
+
+        applyPreviewResult(d) {
+          if (d.window_start != null) this.previewWindowStart = d.window_start;
+          if (d.window_end != null) this.previewWindowEnd = d.window_end;
+          this.previewSubBitmap = !!d.sub_bitmap;
+          const playbackBase = u => (u || '').split('?')[0];
+          const videoChanged = !!(d.playback_url
+            && playbackBase(this.previewVideoUrl) !== d.playback_url);
+          if (d.playback_url) {
+            this.previewVideoUrl = `${d.playback_url}?t=${Date.now()}`;
+          }
+          if (!d.sub_bitmap && d.vtt_tracks?.length) {
+            this.mergeVttTracks(d.vtt_tracks);
+            if (!this.previewSubKey) {
+              this.previewSubKey = d.vtt_tracks[0].key;
+            }
+          } else if (d.sub_bitmap) {
+            this.previewVttTracks = [];
+            this.subCueText = '';
+            this._vttCues = [];
+          }
+          const subKey = this.previewSubKey;
+          this.$nextTick(async () => {
+            this._vttLoadedGen = -1;
+            if (videoChanged || d.sub_bitmap) {
+              const v = this.$refs.previewVideo;
+              if (v) v.load();
+            } else if (subKey) {
+              await this.fetchAndShowSubs(subKey);
+            }
+          });
+        },
+
+        onVideoLoaded() {
+          const v = this.$refs.previewVideo;
+          if (!v) return;
+          this.playerLoading = false;
+          const target = this._seekAfterLoad ?? this.previewTime;
+          const off = target - (this.previewWindowStart ?? 0);
+          if (off >= 0 && isFinite(off)) {
+            v.currentTime = off;
+            this.playerPos = target;
+          }
+          this._seekAfterLoad = null;
+          this.scheduleVttLoad();
+          this.refreshCachedWindows();
+          if (this._playAfterLoad) {
+            this._playAfterLoad = false;
+            v.play().catch(() => {});
+          }
+        },
+
+        async switchPreviewAudio() {
+          if (!this.previewSession || this.previewWindowStart == null) return;
+          await this._previewSwitch();
+        },
+
+        async switchPreviewSub(key) {
+          if (!this.previewSession || this.previewWindowStart == null) return;
+          const subKey = key || this.previewSubKey;
+          this.previewSubKey = subKey;
+          if (!subKey) {
+            this._vttAbort?.abort();
+            this.subCueText = '';
+            this._vttCues = [];
+            return;
+          }
+          const tr = (this.previewSession.sub_tracks || []).find(t => t.key === subKey);
+          if (!tr) return;
+          if (tr.bitmap) {
+            this._vttAbort?.abort();
+            this.subCueText = '';
+            this._vttCues = [];
+            await this._previewSwitch();
+            return;
+          }
+          this.previewSubBitmap = false;
+          const ok = await this.fetchAndShowSubs(subKey);
+          if (!ok) {
+            await this._previewSwitch();
+          }
+        },
+
+        async _previewSwitch() {
+          this.beginPreviewReload();
+          const wasPlaying = this.playerPlaying;
+          this.pausePreviewVideo();
+          this.previewJob = { status: 'running', progress_pct: 0 };
+          try {
+            const r = await fetch('/api/preview/switch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                session_id: this.previewSession.session_id,
+                window_start: this.previewWindowStart,
+                window_end: this.previewWindowEnd,
+                audio_key: this.previewAudioKey || null,
+                sub_key: this.previewSubKey || null,
+                ...this.previewOffsetPayload(false),
+              }),
+            });
+            if (!r.ok) {
+              const e = await r.json().catch(() => ({}));
+              this.playerLoading = false;
+              this.previewJob = { status: 'error', error: e.detail || 'Switch failed' };
+              return;
+            }
+            const d = await r.json();
+            if (d.cached) {
+              this.applyPreviewResult(d);
+              this.previewJob = { status: 'done', progress_pct: 100 };
+              if (wasPlaying) this._playAfterLoad = true;
+            } else {
+              this.playerLoading = true;
+              if (wasPlaying) this._playAfterLoad = true;
+              this.previewJob = { id: d.job_id, status: 'running', progress_pct: 0 };
+              this.startPreviewPolling();
+            }
+          } catch (e) {
+            this.playerLoading = false;
+            this.previewJob = { status: 'error', error: e.message };
+          }
+        },
+
+        startPreviewPolling() {
+          if (this.previewPolling) clearInterval(this.previewPolling);
+          this.previewPolling = setInterval(async () => {
+            if (!this.previewJob?.id) return;
+            try {
+              const r = await fetch(`/api/preview/jobs/${this.previewJob.id}`);
+              if (!r.ok) return;
+              const d = await r.json();
+              this.previewJob = { ...this.previewJob, ...d };
+              if (d.status === 'done') {
+                this.applyPreviewResult(d);
+                clearInterval(this.previewPolling);
+                this.previewPolling = null;
+              }
+              if (d.status === 'error') {
+                this.playerLoading = false;
+                clearInterval(this.previewPolling);
+                this.previewPolling = null;
+              }
+            } catch (_) {}
+          }, 400);
+        },
+
+        fmtClock(sec) {
+          if (sec == null || Number.isNaN(sec)) return '00:00';
+          const s = Math.max(0, Math.floor(sec));
+          const h = Math.floor(s / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          const ss = s % 60;
+          const pad = n => String(n).padStart(2, '0');
+          return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${pad(m)}:${pad(ss)}`;
         },
 
         startPolling() {
@@ -902,9 +1956,19 @@
           return {
             starting: 'Starting…',
             running:  `${this.job.progress_pct || 0}%`,
-            done:     'Done ✓',
+            done:     'Applied ✓',
             error:    `Error: ${this.job.error || 'unknown'}`,
           }[this.job.status] ?? this.job.status;
+        },
+
+        previewStatusTxt() {
+          if (!this.previewJob) return '';
+          return {
+            starting: 'Starting preview…',
+            running:  `Rendering ${this.previewJob.progress_pct || 0}%…`,
+            done:     '',
+            error:    `Error: ${this.previewJob.error || 'unknown'}`,
+          }[this.previewJob.status] ?? this.previewJob.status;
         },
         logTxt() {
           const t = this.job?.log_tail;

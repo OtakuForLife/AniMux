@@ -108,3 +108,44 @@ def test_output_path_is_animux_tmp():
 def test_source_file_is_last():
     cmd = build_mkvmerge_cmd(**{**BASE, "source_track_ids": [1], "dest_track_ids": ALL_DEST})
     assert cmd[-1] == "/src/movie.mkv"
+
+
+def test_source_track_offsets():
+    cmd = build_mkvmerge_cmd(
+        **{
+            **BASE,
+            "source_track_ids": [1, 3],
+            "dest_track_ids": ALL_DEST,
+            "source_track_offsets": {1: 500, 3: -200},
+        }
+    )
+    src_opts = _source_opts(cmd)
+    sync_vals = [src_opts[i + 1] for i, x in enumerate(src_opts) if x == "--sync"]
+    assert sync_vals == ["1:500", "3:-200"]
+
+
+def test_dest_track_offsets():
+    cmd = build_mkvmerge_cmd(
+        **{
+            **BASE,
+            "source_track_ids": [1],
+            "dest_track_ids": [0, 2],
+            "dest_track_offsets": {2: 1000},
+        }
+    )
+    dest_opts = _dest_opts(cmd)
+    assert dest_opts.index("--sync") == len(dest_opts) - 2
+    assert dest_opts[dest_opts.index("--sync") + 1] == "2:1000"
+
+
+def test_zero_offset_omitted():
+    cmd = build_mkvmerge_cmd(
+        **{
+            **BASE,
+            "source_track_ids": [1],
+            "dest_track_ids": ALL_DEST,
+            "source_track_offsets": {1: 0},
+        }
+    )
+    assert "--sync" not in _source_opts(cmd)
+

@@ -18,9 +18,19 @@ class Job:
 JOBS: dict[str, Job] = {}
 
 
+def _sync_opts(offsets: dict[int, int]) -> list[str]:
+    opts: list[str] = []
+    for tid in sorted(offsets):
+        ms = offsets[tid]
+        if ms:
+            opts.extend(["--sync", f"{tid}:{ms}"])
+    return opts
+
+
 def _track_opts(
     track_ids: list[int],
     track_map: dict[int, str],
+    track_offsets: dict[int, int],
     *,
     no_video: bool = False,
 ) -> list[str]:
@@ -45,6 +55,8 @@ def _track_opts(
         opts.extend(["--subtitle-tracks", ",".join(sub_ids)])
     else:
         opts.append("--no-subtitles")
+
+    opts.extend(_sync_opts({k: v for k, v in track_offsets.items() if k in track_ids}))
     return opts
 
 
@@ -59,11 +71,15 @@ def build_mkvmerge_cmd(
     attachments: bool,
     tags: bool,
     output_path: str,
+    source_track_offsets: dict[int, int] | None = None,
+    dest_track_offsets: dict[int, int] | None = None,
 ) -> list[str]:
+    src_off = source_track_offsets or {}
+    dst_off = dest_track_offsets or {}
     cmd = ["mkvmerge", "-o", output_path]
-    cmd.extend(_track_opts(dest_track_ids, dest_track_map))
+    cmd.extend(_track_opts(dest_track_ids, dest_track_map, dst_off))
     cmd.append(dest_path)
-    cmd.extend(_track_opts(source_track_ids, source_track_map, no_video=True))
+    cmd.extend(_track_opts(source_track_ids, source_track_map, src_off, no_video=True))
     if not chapters:
         cmd.append("--no-chapters")
     if not attachments:
@@ -84,6 +100,8 @@ async def start_job(
     chapters: bool,
     attachments: bool,
     tags: bool,
+    source_track_offsets: dict[int, int] | None = None,
+    dest_track_offsets: dict[int, int] | None = None,
 ) -> str:
     job_id = str(uuid.uuid4())
     job = Job(id=job_id)
@@ -93,6 +111,7 @@ async def start_job(
         source_track_ids, source_track_map,
         dest_track_ids, dest_track_map,
         chapters, attachments, tags,
+        source_track_offsets or {}, dest_track_offsets or {},
     ))
     return job_id
 
@@ -108,6 +127,8 @@ async def _run_job(
     chapters: bool,
     attachments: bool,
     tags: bool,
+    source_track_offsets: dict[int, int],
+    dest_track_offsets: dict[int, int],
 ) -> None:
     job = JOBS[job_id]
     job.status = "running"
@@ -118,6 +139,7 @@ async def _run_job(
         source_track_ids, source_track_map,
         dest_track_ids, dest_track_map,
         chapters, attachments, tags, tmp_path,
+        source_track_offsets, dest_track_offsets,
     )
 
     proc = await asyncio.create_subprocess_exec(

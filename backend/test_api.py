@@ -74,3 +74,22 @@ def test_jobs_unknown_id_returns_404(client):
     tc, *_ = client
     resp = tc.get("/api/jobs/nonexistent-id-12345")
     assert resp.status_code == 404
+
+
+def test_preview_unknown_id_returns_404(client):
+    tc, *_ = client
+    resp = tc.get("/api/preview/jobs/nonexistent-id-12345")
+    assert resp.status_code == 404
+
+
+def test_preview_session_missing_files(client):
+    tc, src, dst = client
+    (dst / "out.mkv").write_bytes(b"fake")
+    resp = tc.post("/api/preview/session", json={
+        "source_path": "ghost.mkv",
+        "dest_path": "out.mkv",
+        "track_ids": [],
+        "dest_track_ids": [0],
+    })
+    assert resp.status_code == 404
+

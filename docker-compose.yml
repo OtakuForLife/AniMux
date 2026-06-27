@@ -4,8 +4,8 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - /your/source:/source:ro
-      - /your/destination:/destination:rw
+      - "C:/Users/User/Downloads:/source:ro"
+      - "C:/Users/User/Downloads:/destination:rw"
     environment:
       - SOURCE_DIR=/source
       - DEST_DIR=/destination
